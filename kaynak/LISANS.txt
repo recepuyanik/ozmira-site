@@ -1,0 +1,9 @@
+OZMIRA
+© 2026 OZMIRA. Tüm hakları saklıdır. / All rights reserved. / Alle Rechte vorbehalten. / Todos los derechos reservados.
+
+TR: Bu uygulamanın kodu, tasarımı, adı, metinleri ve tanıtım malzemeleri OZMIRA'ya aittir. Kendi bilgisayarında kullanabilirsin. Yazılı izin olmadan kopyalanamaz, değiştirilip dağıtılamaz ya da satılamaz.
+EN: The code, design, name, texts and promotional material of this application belong to OZMIRA. You may use it on your own computer. It may not be copied, modified and redistributed, or sold without written permission.
+DE: Code, Design, Name, Texte und Werbematerial dieser Anwendung gehören OZMIRA. Du darfst sie auf deinem eigenen Computer nutzen. Ohne schriftliche Erlaubnis darf sie nicht kopiert, verändert weitergegeben oder verkauft werden.
+ES: El código, el diseño, el nombre, los textos y el material promocional de esta aplicación pertenecen a OZMIRA. Puedes usarla en tu propio equipo. No se puede copiar, modificar y redistribuir ni vender sin permiso por escrito.
+
+Üçüncü taraf / Third party: three.js (https://threejs.org), © three.js authors, MIT License. OZMIRA three.js'i pakete koymaz; tarayıcı onu jsdelivr'dan yükler (ya da "ozmira.py vendor" ile bilgisayarına indirirsin).

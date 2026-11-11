@@ -137,7 +137,15 @@ El servidor pasa a ser accesible desde la misma red y el terminal muestra una di
 
 - La escena es una imagen 3D pesada. En tarjetas gráficas antiguas o con el ahorro de batería activado, la calidad baja sola; el brillo puede desactivarse.
 - Tope técnico (también en Pro): 24 sistemas, 200 agentes por sistema. Con más de 8 sistemas la escena crece y la cámara se aleja; esta disposición aún no se ha probado visualmente en una tarjeta gráfica real.
-- Versión 0.2.0. Diseñada solo para uso local.
+- Versión 0.3.0. Diseñada solo para uso local.
 - La ventana de aplicación y el acceso directo del escritorio se probaron con pruebas automáticas en Linux; el comando del acceso directo aún no se ha probado en un equipo real con Windows o macOS. Si no funciona, usa `ozmira-uygulama.bat` / `.command`.
 - Las traducciones de los cuatro idiomas se prepararon con IA; un hablante nativo de inglés, alemán o español debería revisarlas.
 - La escena se probó en un único equipo Windows con tarjeta gráfica real. Si en otras tarjetas la escena no aparece en el primer inicio, comprueba que WebGL esté activado en el navegador.
+
+## Novedades de 0.3.0
+
+- **Panel:** el botón Panel abre el panel de control: tarjetas de resumen, barras de los últimos 7 días, tabla de agentes con búsqueda y orden, lista de eventos y exportación CSV. Iniciar y Finalizar registran un evento a mano; no ejecutan el agente.
+- **Guía:** el botón Guía explica la configuración y temas avanzados en diez lecciones cortas.
+- **Conexión con Claude Code:** `ozmira_hook.py` envía un evento a OZMIRA cuando Claude Code inicia y termina un subagente. En la sección `hooks` de los ajustes de Claude Code, añade este comando para `PreToolUse` y `PostToolUse` (matcher: `Task|Agent`): `python ozmira_hook.py` (con la ruta completa del archivo). Si el id de tu sistema no es `claude`, define la variable de entorno `OZMIRA_SISTEM`. Probado con entradas simuladas; aún no con un Claude Code real.
+- **Flujo:** la pestaña Flujo del panel muestra los tokens de entrada y salida por sistema y agente. Para registrar el reparto: `ozmira.py olay <sistema> <agente> bitti girdi=800 cikti=400` (girdi = entrada, cikti = salida). Si introduces precios, estima el coste; los precios solo se guardan en el navegador.
+- **Derechos de autor:** © 2026 OZMIRA, todos los derechos reservados. Consulta `LISANS.txt`.

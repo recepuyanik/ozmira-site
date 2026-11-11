@@ -135,7 +135,15 @@ Sunucu aynı ağdan erişilebilir olur ve terminal telefon için bir adres yazar
 
 - Sahne ağır bir 3B görüntüdür. Eski ekran kartlarında ya da pil tasarrufundayken kalite kendiliğinden düşer; ışıma kapanabilir.
 - Teknik tavan (Pro dahil): 24 sistem, sistem başına 200 ajan. 8'den fazla sistemde sahne büyür ve kamera uzaklaşır; bu yerleşim gerçek ekran kartında henüz görsel olarak denenmedi.
-- Sürüm 0.2.0. Yalnızca yerel kullanım için tasarlandı.
+- Sürüm 0.3.0. Yalnızca yerel kullanım için tasarlandı.
 - Uygulama penceresi ve masaüstü kısayolu Linux'ta otomatik testlerle sınandı; Windows ve macOS'ta kısayol komutu henüz gerçek bir bilgisayarda denenmedi. Çalışmazsa `ozmira-uygulama.bat` / `.command` dosyalarını kullan.
 - Dört dilin çevirileri yapay zekâ ile hazırlandı; ana dili İngilizce, Almanca ya da İspanyolca olan biri bir gözden geçirmeli.
 - Sahne tek bir Windows bilgisayarda gerçek ekran kartıyla denendi. Diğer ekran kartlarında ilk açılışta sahne görünmezse tarayıcıda WebGL'in açık olduğunu kontrol et.
+
+## 0.3.0 ile gelenler
+
+- **Panel:** alttaki Panel düğmesi yönetim panelini açar. Özet kutuları, son 7 günün çubukları, aranabilir ve sıralanabilir ajan tablosu, olay listesi ve CSV dışa aktarma. Başlat ve Bitir düğmeleri olayı elle kaydeder; ajanı çalıştırmaz.
+- **Rehber:** alttaki Rehber düğmesi on kısa dersle kurulumu ve ileri konuları anlatır.
+- **Claude Code bağlantısı:** `ozmira_hook.py`, Claude Code bir alt ajan başlatırken ve bitirirken OZMIRA'ya olay yollar. Claude Code ayarlarındaki `hooks` bölümüne `PreToolUse` ve `PostToolUse` için (eşleştirici: `Task|Agent`) şu komutu ekle: `python ozmira_hook.py` (tam dosya yoluyla). Sistem kimliği `claude` değilse `OZMIRA_SISTEM` ortam değişkenini ayarla. Sahte girdilerle sınandı; gerçek Claude Code ile denenmedi.
+- **Akış:** paneldeki Akış sekmesi girdi ve çıktı token'larını sistem ve ajan bazında gösterir. Ayrımı bildirmek için: `ozmira.py olay <sistem> <ajan> bitti girdi=800 cikti=400`. Fiyat girersen tahmini maliyeti hesaplar; fiyatlar yalnızca tarayıcıda saklanır.
+- **Telif:** © 2026 OZMIRA, tüm hakları saklıdır. Ayrıntı `LISANS.txt` içinde.

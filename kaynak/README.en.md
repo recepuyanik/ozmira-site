@@ -137,7 +137,15 @@ The server becomes reachable from the same network and the terminal prints an ad
 
 - The scene is a heavy 3D image. On old graphics cards or in battery saver mode the quality drops by itself; glow may switch off.
 - Technical ceiling (Pro included): 24 systems, 200 agents per system. With more than 8 systems the scene grows and the camera moves back; this layout has not yet been visually tried on a real graphics card.
-- Version 0.2.0. Designed for local use only.
+- Version 0.3.0. Designed for local use only.
 - The app window and desktop shortcut were tested with automated tests on Linux; the shortcut command has not yet been tried on a real Windows or macOS computer. If it does not work, use `ozmira-uygulama.bat` / `.command`.
 - The translations of the four languages were prepared with AI; a native speaker of English, German or Spanish should review them.
 - The scene was tried on a single Windows computer with a real graphics card. If the scene does not appear on first start on other graphics cards, check that WebGL is enabled in the browser.
+
+## New in 0.3.0
+
+- **Panel:** the Panel button in the bar opens the control panel: summary tiles, bars for the last 7 days, a searchable and sortable agent table, an event list and CSV export. Start and Finish record an event by hand; they do not run the agent.
+- **Guide:** the Guide button explains setup and further topics in ten short lessons.
+- **Claude Code connection:** `ozmira_hook.py` sends an event to OZMIRA when Claude Code starts and finishes a subagent. In the `hooks` section of your Claude Code settings, add this command for `PreToolUse` and `PostToolUse` (matcher: `Task|Agent`): `python ozmira_hook.py` (with the full file path). If your system id is not `claude`, set the `OZMIRA_SISTEM` environment variable. Tested with simulated input; not yet tried with a real Claude Code.
+- **Flow:** the Flow tab in the panel shows input and output tokens per system and agent. To report the split: `ozmira.py olay <system> <agent> bitti girdi=800 cikti=400` (girdi = input, cikti = output). If you enter prices it estimates the cost; prices are kept only in the browser.
+- **Copyright:** © 2026 OZMIRA, all rights reserved. See `LISANS.txt`.

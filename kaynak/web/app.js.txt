@@ -88,17 +88,21 @@ function dockCiz() {
   dock.append(h('span', { class: 'sep' }), b(t('dock.demo'), () => { demoAcik = !demoAcik; sahne.demo(demoAcik); dockSig = ''; dockCiz(); }, demoAcik));
   if (!ornekMi) dock.append(b(t('dock.baglan'), baglanPenceresi));
   dock.append(b(ornekMi ? t('dock.kur') : t('dock.duzenle'), () => sihirbaz()));
+  dock.append(h('span', { class: 'sep' }), b(t('dock.panel'), () => yonetimPaneli()), b(t('dock.rehber'), () => rehberPenceresi()));
   dock.append(h('span', { class: 'sep' }), b(hesap.plan === 'pro' ? t('dock.pro') : t('dock.ucretsiz'), hesapPenceresi), b(dil.toUpperCase(), dilPenceresi));
 }
 function hepsiniCiz() { hudCiz(); sideCiz(false); kartCiz(); dockCiz(); }
 
 // ---------- Pencere yardımcıları ----------
-let sonOdak = null;
-function pencereAc(icerik) {
-  sonOdak = document.activeElement; const m = $('modal'), p = $('panel'); p.replaceChildren(...icerik); m.hidden = false;
+let sonOdak = null, kapaninca = null;
+function kapanisCalistir() { if (kapaninca) { const f = kapaninca; kapaninca = null; f(); } }
+function pencereAc(icerik, genis = false) {
+  kapanisCalistir();
+  if ($('modal').hidden) sonOdak = document.activeElement;
+  const m = $('modal'), p = $('panel'); p.classList.toggle('wide', genis); p.replaceChildren(...icerik); m.hidden = false; p.scrollTop = 0;
   const ilk = p.querySelector('input,select,textarea,button'); if (ilk) ilk.focus();
 }
-function pencereKapat() { $('modal').hidden = true; $('panel').replaceChildren(); if (sonOdak && sonOdak.focus) sonOdak.focus(); }
+function pencereKapat() { kapanisCalistir(); $('modal').hidden = true; $('panel').replaceChildren(); if (sonOdak && sonOdak.focus) sonOdak.focus(); }
 addEventListener('keydown', (e) => {
   const m = $('modal');
   if (e.key === 'Escape' && !m.hidden) { pencereKapat(); return; }
@@ -123,7 +127,7 @@ function baglanPenceresi() {
     h('h1', { text: t('b.baslik') }),
     h('p', { class: 'lead', text: t('b.lead') }),
     h('h3', { text: t('b.h1') }),
-    komut(cli('basla')), komut(cli('bitti', ' 1200')),
+    komut(cli('basla')), komut(cli('bitti', ' 1200')), komut(cli('bitti', ' girdi=800 cikti=400')),
     h('p', { class: 'hint', text: t('b.hint1', { ids: durum.sistemler.map((x) => x.id).join(', ') }) }),
     h('h3', { text: t('b.h2') }),
     komut(curl),
@@ -259,6 +263,201 @@ function dilPenceresi() {
       onclick: () => { if (k !== dil) { dilSec(k); location.reload(); } else pencereKapat(); } }))),
     h('div', { class: 'foot' }, h('span'), h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
   ]);
+}
+
+// ---------- Yönetim paneli: özet, ajanlar, olaylar ----------
+function onceMetin(t0) {
+  if (!t0) return t('p.hic');
+  const g = Math.max(0, Math.round(Date.now() / 1000 - t0));
+  const x = g < 90 ? t('side.sn', { n: g }) : g < 5400 ? t('side.dk', { n: Math.round(g / 60) }) : g < 172800 ? t('side.sa', { n: Math.round(g / 3600) }) : t('side.gun', { n: Math.round(g / 86400) });
+  return t('p.once', { x });
+}
+function yonetimPaneli(sekme0) {
+  let sekme = sekme0 || 'ozet', ara = '', sisF = '', yalnizCalisan = false, sira = { k: 'son', yon: -1 }, mesaj = '';
+  let pv = { olaylar: [], gunluk: [], olay_toplam: 0 };
+  const govde = h('div', { class: 'pn-body' });
+  const sekmeCubugu = h('div', { class: 'tabs', role: 'tablist' });
+  const durumSatiri = h('div', { class: 'found', role: 'status' });
+  const araInp = h('input', { type: 'search', placeholder: t('p.ara'), 'aria-label': t('p.ara'), autocomplete: 'off', spellcheck: 'false' });
+  araInp.addEventListener('input', () => { ara = araInp.value.trim().toLowerCase(); ajanTablosu(); });
+  const sisSel = h('select', { 'aria-label': t('p.sistemSuz') });
+  sisSel.addEventListener('change', () => { sisF = sisSel.value; ajanTablosu(); });
+  const calChk = h('input', { type: 'checkbox', id: 'pncal' });
+  calChk.addEventListener('change', () => { yalnizCalisan = calChk.checked; ajanTablosu(); });
+  const ozetKutu = h('div'), tabloKutu = h('div', { class: 'tbl-wrap' }), olayKutu = h('div', { class: 'tbl-wrap' }), akisKutu = h('div'), fiyatKutu = h('div', { class: 'prices' });
+  // Fiyatlar yalnızca bu tarayıcıda tutulur (1 milyon token başına); maliyet tahmindir.
+  let fiyat = {}; try { fiyat = JSON.parse(localStorage.getItem('ozmira-fiyat') || '{}') || {}; } catch (_) { fiyat = {}; }
+  const fiyatYaz = () => { try { localStorage.setItem('ozmira-fiyat', JSON.stringify(fiyat)); } catch (_) { /* depolama yoksa bu oturumda kalır */ } };
+  const sayi = (v) => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) && n >= 0 ? n : 0; };
+  const maliyet = (sid, g, c) => { const f = fiyat[sid] || {}; return (g / 1e6) * sayi(f.g || 0) + (c / 1e6) * sayi(f.c || 0); };
+  const para = (x) => (x > 0 ? '$' + x.toLocaleString(dil, { minimumFractionDigits: 2, maximumFractionDigits: x < 1 ? 4 : 2 }) : '—');
+  function fiyatlariCiz() {
+    fiyatKutu.replaceChildren(...durum.sistemler.map((s) => { const f = fiyat[s.id] || (fiyat[s.id] = {});
+      const alan = (k, ad) => { const i = h('input', { type: 'text', inputmode: 'decimal', value: f[k] != null ? String(f[k]) : '', placeholder: '0', autocomplete: 'off', 'aria-label': s.ad + ': ' + ad });
+        i.addEventListener('input', () => { f[k] = i.value.trim(); fiyatYaz(); akisCiz(); }); return h('label', { class: 'f' }, ad, i); };
+      return h('div', { class: 'price' }, h('div', {}, h('i', { class: 'dot', style: 'background:' + s.renk }), h('b', { text: s.ad })), alan('g', t('p.f.girdi')), alan('c', t('p.f.cikti'))); }));
+  }
+  function akisCiz() {
+    const S = durum.sistemler.map((s) => { const g = (s.token && s.token.girdi) || 0, c = (s.token && s.token.cikti) || 0, top = (s.token && s.token.toplam) || 0; return { s, g, c, top, ayrimsiz: Math.max(0, top - g - c) }; });
+    const TG = S.reduce((n, x) => n + x.g, 0), TC = S.reduce((n, x) => n + x.c, 0), TA = S.reduce((n, x) => n + x.ayrimsiz, 0), enb = Math.max(1, ...S.map((x) => Math.max(x.g, x.c)));
+    const yuzde = (v) => Math.max(v > 0 ? 2 : 0, Math.round((v / enb) * 100));
+    const akis = h('div', { class: 'flow', role: 'img', 'aria-label': t('p.a.aria', { g: fmt(TG), c: fmt(TC) }) },
+      h('div', { class: 'flow-h' }, h('span', { text: t('p.a.girdi') + ' ' + fmt(TG) }), h('span'), h('span', { text: t('p.a.cikti') + ' ' + fmt(TC) })),
+      S.map((x) => h('div', { class: 'flow-r' },
+        h('div', { class: 'in' }, h('small', { text: fmt(x.g) }), h('i', { style: 'width:' + yuzde(x.g) + '%;background:' + x.s.renk })),
+        h('div', { class: 'mid' }, h('i', { class: 'dot', style: 'background:' + x.s.renk }), h('b', { text: x.s.ad })),
+        h('div', { class: 'out' }, h('i', { style: 'width:' + yuzde(x.c) + '%;background:' + x.s.renk }), h('small', { text: fmt(x.c) })))));
+    const satir = (ad, alt, g, c, top, mal, kalin) => h('tr', { class: kalin ? 'sum' : '' }, h('td', {}, kalin ? h('b', { text: ad }) : ad, alt ? h('small', { text: alt }) : null),
+      h('td', { class: 'num', text: fmt(g) }), h('td', { class: 'num', text: fmt(c) }), h('td', { class: 'num', text: fmt(top) }), h('td', { class: 'num', text: g > 0 ? (c / g).toLocaleString(dil, { maximumFractionDigits: 2 }) : '—' }), h('td', { class: 'num', text: para(mal) }));
+    const govdeSatir = []; let TM = 0;
+    S.forEach((x) => { const m = maliyet(x.s.id, x.g, x.c); TM += m; govdeSatir.push(satir(x.s.ad, '', x.g, x.c, x.top, m, true));
+      x.s.ajanlar.filter((a) => (a.token || 0) > 0).sort((p, q) => (q.token || 0) - (p.token || 0)).forEach((a) => govdeSatir.push(satir(a.ad, '', a.girdi || 0, a.cikti || 0, a.token || 0, maliyet(x.s.id, a.girdi || 0, a.cikti || 0), false))); });
+    const tablo = h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, [t('p.a.kaynak'), t('p.a.girdi'), t('p.a.cikti'), t('p.a.toplam'), t('p.a.oran'), t('p.a.maliyet')].map((x, i) => h('th', { scope: 'col', class: i ? 'num' : '', text: x })))),
+      h('tbody', {}, govdeSatir), h('tfoot', {}, satir(t('p.a.hepsi'), '', TG, TC, S.reduce((n, x) => n + x.top, 0), TM, true)));
+    akisKutu.replaceChildren(
+      TG + TC > 0 ? akis : h('p', { class: 'hint', text: t('p.a.bos') }),
+      TA > 0 ? h('p', { class: 'hint', text: t('p.a.ayrimsiz', { n: fmt(TA) }) }) : null,
+      h('h3', { text: t('p.a.veri') }), h('div', { class: 'tbl-wrap' }, tablo));
+  }
+  const satirlar = () => durum.sistemler.flatMap((s) => s.ajanlar.map((a) => ({ s, a })));
+
+  function sekmeleriCiz() {
+    sekmeCubugu.replaceChildren(...[['ozet', 'p.t.ozet'], ['ajanlar', 'p.t.ajanlar'], ['akis', 'p.t.akis'], ['olaylar', 'p.t.olaylar']].map(([k, ad]) =>
+      h('button', { type: 'button', role: 'tab', class: 'tab' + (k === sekme ? ' on' : ''), 'aria-selected': k === sekme ? 'true' : 'false', text: t(ad), onclick: () => { sekme = k; sekmeleriCiz(); govdeCiz(); } })));
+  }
+  function kutu(etiket, deger, alt) { return h('div', { class: 'kpi' }, h('span', { text: etiket }), h('b', { text: deger }), alt ? h('small', { text: alt }) : null); }
+  function ozetCiz() {
+    const liste = satirlar(), kos = liste.filter((x) => x.a.kosuyor).length;
+    const toplam = durum.sistemler.reduce((n, s) => n + ((s.token && s.token.toplam) || 0), 0);
+    const bugun = pv.gunluk.length ? pv.gunluk[pv.gunluk.length - 1] : { is: 0, token: 0 };
+    const pro = hesap.plan === 'pro';
+    const kpiler = h('div', { class: 'kpis' },
+      kutu(t('p.k.sistem'), pro ? String(durum.sistemler.length) : durum.sistemler.length + ' / ' + hesap.sistem_siniri),
+      kutu(t('p.k.ajan'), pro ? String(liste.length) : liste.length + ' / ' + hesap.ajan_siniri),
+      kutu(t('p.k.calisan'), String(kos)), kutu(t('p.k.bugun'), String(bugun.is)), kutu(t('p.k.token'), fmt(toplam)));
+    const hIs = pv.gunluk.reduce((n, g) => n + g.is, 0), hTok = pv.gunluk.reduce((n, g) => n + g.token, 0);
+    const olcu = hTok > 0 ? 'token' : 'is', enb = Math.max(1, ...pv.gunluk.map((g) => g[olcu]));
+    const cubuklar = h('div', { class: 'bars', role: 'img', 'aria-label': t('p.hafta') + ': ' + t('p.haftaAlt', { i: hIs, t: fmt(hTok) }) }, pv.gunluk.map((g) => {
+      const gun = new Date(g.gun + 'T12:00:00').toLocaleDateString(dil, { weekday: 'short' });
+      return h('div', { class: 'bar', title: g.gun + ' · ' + t('p.haftaAlt', { i: g.is, t: fmt(g.token) }) }, h('i', { style: 'height:' + Math.round((g[olcu] / enb) * 100) + '%' }), h('span', { text: gun }));
+    }));
+    const sistemTablo = h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, [t('p.c.sistem'), t('p.k.ajan'), t('p.k.calisan'), t('card.token'), t('p.c.son'), ''].map((x) => h('th', { scope: 'col', text: x })))),
+      h('tbody', {}, durum.sistemler.map((s) => h('tr', {},
+        h('td', {}, h('i', { class: 'dot', style: 'background:' + s.renk }), h('b', { text: s.ad })),
+        h('td', { class: 'num', text: String(s.ajanlar.length) }), h('td', { class: 'num', text: String(s.ajanlar.filter((a) => a.kosuyor).length) }),
+        h('td', { class: 'num', text: fmt((s.token && s.token.toplam) || 0) }), h('td', { text: onceMetin(s.son_etkinlik) }),
+        h('td', {}, h('button', { class: 'btn small', type: 'button', text: t('p.odak'), onclick: () => { pencereKapat(); sahne.focus(s.id); } }))))));
+    ozetKutu.replaceChildren(kpiler,
+      h('h3', { text: t('p.hafta') }), ornekMi || !hIs ? h('p', { class: 'hint', text: t('p.haftaBos') }) : h('div', {}, cubuklar, h('p', { class: 'hint', text: t('p.haftaAlt', { i: hIs, t: fmt(hTok) }) })),
+      h('h3', { text: t('p.sistemler') }), h('div', { class: 'tbl-wrap' }, sistemTablo),
+      h('p', { class: 'hint', text: pro ? t('p.planPro') : t('p.plan', { s: hesap.sistem_siniri, su: durum.sistemler.length, a: hesap.ajan_siniri, au: liste.length }) }));
+  }
+  async function olayGonder(s, a) {
+    const olay = a.kosuyor ? 'bitti' : 'basla';
+    try { await api('POST', '/api/olay', { sistem: s.id, ajan: a.ad, olay }); mesaj = t('p.gonderildi', { a: a.ad, o: t('p.o.' + olay) }); }
+    catch (e) { mesaj = e.message; }
+    await tazele();
+  }
+  function ajanTablosu() {
+    const al = { ad: (x) => x.a.ad.toLowerCase(), sistem: (x) => x.s.ad.toLowerCase(), durum: (x) => (x.a.kosuyor ? 1 : 0), calisma: (x) => x.a.calisma || 0, token: (x) => x.a.token || 0, son: (x) => x.a.son || 0 }[sira.k];
+    let liste = satirlar().filter((x) => (!sisF || x.s.id === sisF) && (!yalnizCalisan || x.a.kosuyor) && (!ara || x.a.ad.toLowerCase().includes(ara) || (x.a.aciklama || '').toLowerCase().includes(ara)));
+    liste.sort((p, q) => { const u = al(p), v = al(q); return (u < v ? -1 : u > v ? 1 : 0) * sira.yon; });
+    const bas = (k, ad, sayi) => h('th', { scope: 'col', class: sayi ? 'num' : '', 'aria-sort': sira.k === k ? (sira.yon > 0 ? 'ascending' : 'descending') : 'none' },
+      h('button', { type: 'button', class: 'th', 'aria-label': t('p.sirala', { x: ad }), text: ad + (sira.k === k ? (sira.yon > 0 ? ' ▲' : ' ▼') : ''), onclick: () => { sira = { k, yon: sira.k === k ? -sira.yon : (sayi ? -1 : 1) }; ajanTablosu(); } }));
+    if (!liste.length) { tabloKutu.replaceChildren(h('p', { class: 'hint', text: t('p.sonucYok') })); return; }
+    tabloKutu.replaceChildren(h('table', { class: 'tbl' },
+      h('thead', {}, h('tr', {}, bas('ad', t('p.c.ajan')), bas('sistem', t('p.c.sistem')), bas('durum', t('card.durum')), bas('calisma', t('card.calisma'), true), bas('token', t('card.token'), true), bas('son', t('p.c.son')), h('th', { scope: 'col', text: t('p.c.eylem') }))),
+      h('tbody', {}, liste.map(({ s, a }) => h('tr', {},
+        h('td', {}, h('b', { text: a.ad }), a.aciklama ? h('small', { text: a.aciklama }) : null),
+        h('td', {}, h('i', { class: 'dot', style: 'background:' + s.renk }), s.ad),
+        h('td', {}, h('span', { class: 'pill' + (a.kosuyor ? ' run' : ''), text: a.kosuyor ? t('card.calisiyor') : t('card.bosta') })),
+        h('td', { class: 'num', text: String(a.calisma || 0) }), h('td', { class: 'num', text: fmt(a.token || 0) }), h('td', { text: onceMetin(a.son) }),
+        h('td', {}, h('button', { class: 'btn small', type: 'button', disabled: ornekMi, text: a.kosuyor ? t('p.bitir') : t('p.baslat'), onclick: (ev) => { ev.currentTarget.disabled = true; olayGonder(s, a); } })))))));
+  }
+  function olaylariCiz() {
+    if (!pv.olaylar.length) { olayKutu.replaceChildren(h('p', { class: 'hint', text: t('p.olayYok') })); return; }
+    const sAd = Object.fromEntries(durum.sistemler.map((s) => [s.id, s]));
+    const saat = (x) => new Date(x * 1000).toLocaleString(dil, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    olayKutu.replaceChildren(h('p', { class: 'hint', text: t('p.olaySay', { n: pv.olaylar.length, m: pv.olay_toplam }) }), h('table', { class: 'tbl' },
+      h('thead', {}, h('tr', {}, [t('p.c.zaman'), t('p.c.sistem'), t('p.c.ajan'), t('p.c.olay'), t('card.token')].map((x, i) => h('th', { scope: 'col', class: i === 4 ? 'num' : '', text: x })))),
+      h('tbody', {}, pv.olaylar.map((e) => { const s = sAd[e.sistem]; return h('tr', {},
+        h('td', { text: saat(e.t) }), h('td', {}, s ? h('i', { class: 'dot', style: 'background:' + s.renk }) : null, s ? s.ad : e.sistem), h('td', {}, h('b', { text: e.ajan }), e.is ? h('small', { text: e.is }) : null),
+        h('td', {}, h('span', { class: 'pill' + (e.olay === 'basla' ? ' run' : ''), text: t('p.o.' + (e.olay === 'basla' ? 'basla' : 'bitti')) })), h('td', { class: 'num', text: e.token != null ? fmt(e.token) : '' })); }))));
+  }
+  function govdeCiz() {
+    if (sekme === 'ozet') { govde.replaceChildren(ozetKutu); ozetCiz(); }
+    else if (sekme === 'ajanlar') {
+      sisSel.replaceChildren(h('option', { value: '', text: t('p.tumSistem') }), ...durum.sistemler.map((s) => h('option', { value: s.id, text: s.ad, selected: s.id === sisF })));
+      govde.replaceChildren(h('div', { class: 'row tools' }, h('div', { class: 'grow' }, araInp), sisSel, h('label', { class: 'chk', for: 'pncal' }, calChk, ' ' + t('p.sadeceCalisan'))), tabloKutu, h('p', { class: 'hint', text: t('p.elle') }));
+      ajanTablosu();
+    } else if (sekme === 'akis') {
+      fiyatlariCiz(); govde.replaceChildren(akisKutu, h('h3', { text: t('p.f.baslik') }), fiyatKutu, h('p', { class: 'hint', text: t('p.f.not') })); akisCiz();
+    } else { govde.replaceChildren(olayKutu); olaylariCiz(); }
+  }
+  function guncelle() {
+    durumSatiri.textContent = mesaj; durumSatiri.hidden = !mesaj;
+    if (sekme === 'ozet') ozetCiz(); else if (sekme === 'ajanlar') ajanTablosu(); else if (sekme === 'akis') akisCiz(); else olaylariCiz();
+  }
+  async function tazele() {
+    await yukle(false);
+    if (!ornekMi) { try { const p = await api('GET', '/api/panel'); if (!p.yok) pv = p; } catch (_) { /* eski veri kalır */ } }
+    guncelle();
+  }
+  function csvIndir() {
+    const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const sat = [['system', 'agent', 'description', 'status', 'runs', 'tokens', 'last_activity_utc', 'input_tokens', 'output_tokens'].map(q).join(',')].concat(satirlar().map(({ s, a }) =>
+      [s.ad, a.ad, a.aciklama || '', a.kosuyor ? 'running' : 'idle', a.calisma || 0, a.token || 0, a.son ? new Date(a.son * 1000).toISOString() : '', a.girdi || 0, a.cikti || 0].map(q).join(',')));
+    const url = URL.createObjectURL(new Blob(['﻿' + sat.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const a = h('a', { href: url, download: 'ozmira-agents.csv' }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  sekmeleriCiz(); govdeCiz();
+  pencereAc([
+    h('h1', { text: t('p.baslik') }), h('p', { class: 'lead', text: ornekMi ? t('p.ornek') : t('p.lead') }),
+    sekmeCubugu, durumSatiri, govde,
+    h('div', { class: 'foot' }, h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', text: t('p.csv'), onclick: csvIndir }),
+      h('button', { class: 'btn', type: 'button', text: ornekMi ? t('dock.kur') : t('dock.duzenle'), onclick: () => sihirbaz() })),
+      h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
+  ], true);
+  durumSatiri.hidden = true;
+  const tm = setInterval(() => { if (!document.hidden) tazele(); }, 3000);
+  kapaninca = () => clearInterval(tm);
+  tazele();
+}
+
+// ---------- Rehber: adım adım kurulum ve ileri konular ----------
+const DERSLER = [
+  { k: 1 }, { k: 2, eylem: () => sihirbaz() }, { k: 3, eylem: () => sihirbaz() }, { k: 4, eylem: () => baglanPenceresi(), gercek: true }, { k: 5, eylem: () => yonetimPaneli('ajanlar') },
+  { k: 6, ileri: true, eylem: () => baglanPenceresi(), gercek: true }, { k: 7, ileri: true }, { k: 8, ileri: true }, { k: 9, ileri: true }, { k: 10, ileri: true, eylem: () => hesapPenceresi() },
+];
+function rehberOku() { try { return new Set(JSON.parse(localStorage.getItem('ozmira-rehber') || '[]')); } catch (_) { return new Set(); } }
+function rehberYaz(s) { try { localStorage.setItem('ozmira-rehber', JSON.stringify([...s])); } catch (_) { /* depolama yoksa ilerleme bu oturumda kalır */ } }
+let rehberBellek = null;
+function rehberPenceresi(ilk) {
+  const biten = rehberBellek || (rehberBellek = rehberOku());
+  let secili = ilk || (DERSLER.find((d) => !biten.has(d.k)) || DERSLER[0]).k;
+  const py = /win/i.test(navigator.platform || '') ? 'py' : 'python3';
+  const degisken = { py, p: hesap.veri_klasoru || '~/.ozmira', s: hesap.sistem_siniri, a: hesap.ajan_siniri };
+  function ciz() {
+    const d = DERSLER.find((x) => x.k === secili), sira = DERSLER.indexOf(d);
+    const grup = (ileri) => DERSLER.filter((x) => !!x.ileri === ileri).map((x) => h('button', { type: 'button', class: 'les' + (x.k === secili ? ' on' : '') + (biten.has(x.k) ? ' done' : ''), 'aria-current': x.k === secili ? 'true' : 'false',
+      onclick: () => { secili = x.k; ciz(); } }, h('i', { text: biten.has(x.k) ? '✓' : String(x.k) }), h('span', { text: t('r.' + x.k + '.b') })));
+    const paragraflar = t('r.' + d.k + '.g', degisken).split('|').map((x) => x.startsWith('$ ')
+      ? h('div', { class: 'code' }, h('span', { text: x.slice(2) }), h('button', { class: 'btn small', type: 'button', text: t('c.kopyala'), onclick: (ev) => kopyala(x.slice(2), ev.currentTarget) }))
+      : h('p', { text: x }));
+    const denenebilir = d.eylem && !(d.gercek && ornekMi);
+    pencereAc([
+      h('h1', { text: t('r.baslik') }), h('p', { class: 'lead', text: t('r.lead') + ' ' + t('r.ilerleme', { n: biten.size, m: DERSLER.length }) }),
+      h('div', { class: 'guide' },
+        h('nav', { 'aria-label': t('r.dersler') }, h('h3', { text: t('r.temel') }), grup(false), h('h3', { text: t('r.ileri') }), grup(true)),
+        h('article', {}, h('h2', { text: d.k + '. ' + t('r.' + d.k + '.b') }), paragraflar,
+          h('div', { class: 'row' },
+            denenebilir ? h('button', { class: 'btn main', type: 'button', text: t('r.dene'), onclick: () => { biten.add(d.k); rehberYaz(biten); d.eylem(); } }) : null,
+            h('button', { class: 'btn', type: 'button', text: biten.has(d.k) ? t('r.tamam') : t('r.isaretle'), disabled: biten.has(d.k), onclick: () => { biten.add(d.k); rehberYaz(biten); ciz(); } }),
+            sira < DERSLER.length - 1 ? h('button', { class: 'btn', type: 'button', text: t('r.sonraki'), onclick: () => { biten.add(d.k); rehberYaz(biten); secili = DERSLER[sira + 1].k; ciz(); } }) : null))),
+      h('div', { class: 'foot' }, h('span'), h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
+    ], true);
+  }
+  ciz();
 }
 
 // ---------- Veri döngüsü ----------

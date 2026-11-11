@@ -137,7 +137,15 @@ Der Server ist dann aus demselben Netzwerk erreichbar, und das Terminal zeigt ei
 
 - Die Szene ist ein aufwendiges 3D-Bild. Auf alten Grafikkarten oder im Energiesparmodus sinkt die Qualität von selbst; der Leuchteffekt kann entfallen.
 - Technische Obergrenze (auch in Pro): 24 Systeme, 200 Agenten pro System. Bei mehr als 8 Systemen wird die Szene größer und die Kamera rückt weg; diese Anordnung wurde auf einer echten Grafikkarte noch nicht visuell erprobt.
-- Version 0.2.0. Nur für die lokale Nutzung gedacht.
+- Version 0.3.0. Nur für die lokale Nutzung gedacht.
 - Das App-Fenster und die Desktop-Verknüpfung wurden unter Linux mit automatischen Tests geprüft; der Verknüpfungsbefehl wurde auf einem echten Windows- oder macOS-Computer noch nicht ausprobiert. Funktioniert er nicht, nutze `ozmira-uygulama.bat` / `.command`.
 - Die Übersetzungen der vier Sprachen wurden mit KI erstellt; ein Muttersprachler für Englisch, Deutsch oder Spanisch sollte sie prüfen.
 - Die Szene wurde auf einem einzelnen Windows-Computer mit echter Grafikkarte erprobt. Erscheint sie auf anderen Grafikkarten beim ersten Start nicht, prüfe, ob WebGL im Browser aktiviert ist.
+
+## Neu in 0.3.0
+
+- **Panel:** Die Schaltfläche Panel öffnet die Verwaltung: Übersichtskacheln, Balken der letzten 7 Tage, eine durchsuchbare und sortierbare Agententabelle, eine Ereignisliste und CSV-Export. Starten und Beenden speichern ein Ereignis von Hand; sie führen den Agenten nicht aus.
+- **Anleitung:** Die Schaltfläche Anleitung erklärt Einrichtung und weiterführende Themen in zehn kurzen Lektionen.
+- **Claude-Code-Anbindung:** `ozmira_hook.py` sendet ein Ereignis an OZMIRA, wenn Claude Code einen Subagenten startet und beendet. Trage im Abschnitt `hooks` der Claude-Code-Einstellungen für `PreToolUse` und `PostToolUse` (Matcher: `Task|Agent`) diesen Befehl ein: `python ozmira_hook.py` (mit vollständigem Dateipfad). Ist deine System-ID nicht `claude`, setze die Umgebungsvariable `OZMIRA_SISTEM`. Mit simulierten Eingaben getestet; mit einem echten Claude Code noch nicht ausprobiert.
+- **Fluss:** Der Tab Fluss im Panel zeigt Eingabe- und Ausgabe-Tokens pro System und Agent. So meldest du die Aufteilung: `ozmira.py olay <System> <Agent> bitti girdi=800 cikti=400` (girdi = Eingabe, cikti = Ausgabe). Mit eingetragenen Preisen werden die Kosten geschätzt; die Preise bleiben nur im Browser.
+- **Urheberrecht:** © 2026 OZMIRA, alle Rechte vorbehalten. Siehe `LISANS.txt`.

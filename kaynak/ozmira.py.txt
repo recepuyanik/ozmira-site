@@ -38,7 +38,7 @@ import uuid
 import webbrowser
 from pathlib import Path
 
-SURUM = "0.2.0"
+SURUM = "0.3.0"
 KOK = Path(__file__).resolve().parent
 WEB = KOK / "web"
 EV = Path(os.environ.get("OZMIRA_HOME") or (Path.home() / ".ozmira"))
@@ -512,12 +512,16 @@ def olay_dogrula(o, sistem_idleri):
     kayit = {"t": time.time(), "sistem": sid, "ajan": ajan, "olay": olay, "id": temiz(o.get("id") or (sid + ":" + ajan), 64)}
     if o.get("is"):
         kayit["is"] = temiz(o["is"], 120)
-    for k in ("token", "sure_ms"):
+    for k in ("token", "sure_ms", "girdi", "cikti"):
         v = o.get(k)
         if v is not None:
             if not isinstance(v, (int, float)) or isinstance(v, bool) or v < 0 or v > 1e9:
                 raise ValueError("%s sayı olmalı." % k)
             kayit[k] = int(v)
+    # Girdi/çıktı ayrımı verildiyse toplam en az ikisinin toplamıdır.
+    ayrim = kayit.get("girdi", 0) + kayit.get("cikti", 0)
+    if ayrim and kayit.get("token", 0) < ayrim:
+        kayit["token"] = ayrim
     return kayit
 
 
@@ -554,7 +558,7 @@ def durum_uret():
     pl = plan()
     kota, gizli = (None if pl == "pro" else UCRETSIZ_AJAN), 0
     for s in pr["sistemler"]:
-        roster = {a["ad"]: dict(a, calisma=0, token=0, son=0, kosuyor=False) for a in ajanlari_tara(s)}
+        roster = {a["ad"]: dict(a, calisma=0, token=0, girdi=0, cikti=0, son=0, kosuyor=False) for a in ajanlari_tara(s)}
         toplam, son_ev, acik = 0, 0, {}
         for e in ev:
             if e.get("sistem") != s["id"]:
@@ -563,7 +567,7 @@ def durum_uret():
             if not isinstance(ad, str):
                 continue
             if ad not in roster and len(roster) < AJAN_TAVAN:
-                roster[ad] = {"ad": ad, "aciklama": "", "calisma": 0, "token": 0, "son": 0, "kosuyor": False}
+                roster[ad] = {"ad": ad, "aciklama": "", "calisma": 0, "token": 0, "girdi": 0, "cikti": 0, "son": 0, "kosuyor": False}
             a = roster.get(ad)
             if a is None:
                 continue
@@ -578,6 +582,10 @@ def durum_uret():
                 tk = e.get("token") if isinstance(e.get("token"), (int, float)) else 0
                 a["token"] += int(tk)
                 toplam += int(tk)
+                for k in ("girdi", "cikti"):
+                    v = e.get(k)
+                    if isinstance(v, (int, float)) and not isinstance(v, bool):
+                        a[k] += int(v)
         for ad, t in acik.values():
             if simdi - t < 1800 and ad in roster:
                 roster[ad]["kosuyor"] = True
@@ -590,9 +598,33 @@ def durum_uret():
             kota -= len(gorunen)
             liste = gorunen
         sistemler.append({"id": s["id"], "ad": s["ad"], "stil": s["stil"], "renk": s["renk"], "ajanlar": liste,
-                          "token": {"toplam": toplam}, "son_etkinlik": son_ev})
+                          "token": {"toplam": toplam, "girdi": sum(a["girdi"] for a in liste), "cikti": sum(a["cikti"] for a in liste)},
+                          "son_etkinlik": son_ev})
     return {"yok": False, "uretildi": simdi, "merkez": pr["merkez"], "sistemler": sistemler,
             "plan": {"ad": pl, "ajan_siniri": UCRETSIZ_AJAN if pl != "pro" else None, "gizli_ajan": gizli}}
+
+
+def panel_uret():
+    """Yönetim paneli için son olaylar ve son 7 günün özeti. Yalnızca görünen ajanların olaylarını verir."""
+    d = durum_uret()
+    if d.get("yok"):
+        return {"yok": True}
+    gorunen = {(s["id"], a["ad"]) for s in d["sistemler"] for a in s["ajanlar"]}
+    ev = [e for e in olaylari_oku() if (e.get("sistem"), e.get("ajan")) in gorunen
+          and isinstance(e.get("t"), (int, float)) and not isinstance(e.get("t"), bool)]
+    simdi = time.time()
+    gunler = [{"gun": time.strftime("%Y-%m-%d", time.localtime(simdi - i * 86400)), "is": 0, "token": 0} for i in range(6, -1, -1)]
+    idx = {g["gun"]: g for g in gunler}
+    for e in ev:
+        if e.get("olay") != "bitti":
+            continue
+        g = idx.get(time.strftime("%Y-%m-%d", time.localtime(e["t"])))
+        if g:
+            g["is"] += 1
+            tk = e.get("token")
+            g["token"] += int(tk) if isinstance(tk, (int, float)) and not isinstance(tk, bool) else 0
+    son = [{k: e[k] for k in ("t", "sistem", "ajan", "olay", "token", "girdi", "cikti", "sure_ms", "is") if k in e} for e in ev[-80:]][::-1]
+    return {"yok": False, "olaylar": son, "gunluk": gunler, "olay_toplam": len(ev)}
 
 
 # ---------- three.js indirici ----------
@@ -721,6 +753,8 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self._json(200, profil_oku() or {"yok": True})
             if p == "/api/durum":
                 return self._json(200, durum_uret())
+            if p == "/api/panel":
+                return self._json(200, panel_uret())
             if p == "/api/oneri":
                 return self._json(200, {"klasorler": oneriler()})
             if p == "/api/hesap":
@@ -1002,6 +1036,10 @@ def komut_olay(a):
     rest = a[3:]
     if rest and rest[0].isdigit():
         o["token"] = int(rest.pop(0))
+    # İsteğe bağlı ayrım: girdi=800 cikti=400
+    while rest and re.match(r"^(girdi|cikti)=\d{1,10}$", rest[0]):
+        k, v = rest.pop(0).split("=")
+        o[k] = int(v)
     if rest:
         o["is"] = " ".join(rest)
     try:
