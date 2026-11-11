@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OZMIRA</title>
+<meta name="description" content="OZMIRA: AI systems in one 3D scene. Local app, free to start.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Koyu, tek görünümlü sayfa: ürünün kendisi koyu bir sahne. Renkler sahnedeki sistem renkleriyle aynı. */
+:root {
+  --bg: #080b15; --bg2: #0c1120; --card: #0f1527; --ink: #e8ecf4; --mute: #98a3bb; --line: #232d48;
+  --accent: #f5b82e; --accent-ink: #1b1300; --accent-soft: #2a2210; --ok: #5fe0a0; --warn: #f0b45a; --warn-soft: #33270f;
+  --c1: #4d8dff; --c2: #ff8a3d; --c3: #c06bff; --c4: #5fe0d0;
+  --head: "Space Grotesk", system-ui, "Segoe UI", sans-serif; --body: "Inter", system-ui, "Segoe UI", sans-serif; --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.65 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--head); margin: 0; line-height: 1.1; text-wrap: balance; letter-spacing: -.015em; }
+h1 { font-size: clamp(36px, 6.6vw, 64px); font-weight: 700; }
+h2 { font-size: clamp(25px, 3.8vw, 36px); font-weight: 600; }
+h3 { font-size: 18px; font-weight: 600; }
+p { margin: 0; } a { color: var(--accent); }
+.wrap { max-width: 1060px; margin: 0 auto; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+nav { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-block: 20px; flex-wrap: wrap; }
+.brand { font: 600 15px var(--mono); letter-spacing: .34em; }
+.links { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; }
+.links a { color: var(--mute); text-decoration: none; } .links a:hover { color: var(--ink); }
+.tag { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 5px 11px; border-radius: 999px; }
+.hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 36px; align-items: center; padding-block: 36px 64px; }
+.lead { font-size: 18px; color: var(--mute); margin-top: 18px; max-width: 54ch; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; align-items: center; }
+.btn { font: 600 15px var(--body); border-radius: 999px; padding: 13px 24px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; text-decoration: none; display: inline-block; }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); } .btn.ghost:hover { border-color: var(--mute); filter: none; }
+.small { font-size: 13px; color: var(--mute); }
+.stage { position: relative; width: 100%; max-width: 460px; justify-self: center; aspect-ratio: 1; min-width: 0; }
+.stage canvas { width: 100%; height: 100%; display: block; }
+.stage .hud { position: absolute; left: 4px; top: 2px; font: 500 11px var(--mono); letter-spacing: .14em; color: var(--ok); }
+.stage .tok { position: absolute; right: 4px; top: 2px; font: 500 11px var(--mono); letter-spacing: .14em; color: var(--mute); text-align: right; }
+section { padding-block: 60px; border-top: 1px solid var(--line); display: grid; gap: 26px; }
+.sub { color: var(--mute); max-width: 62ch; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.box { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.box p { color: var(--mute); font-size: 15px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; margin-right: 8px; vertical-align: 0; }
+.videobox { background: #000; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; aspect-ratio: 16 / 9; max-width: 100%; }
+.videobox video { width: 100%; height: 100%; display: block; background: #000; }
+.steps { display: grid; gap: 18px; counter-reset: s; padding: 0; margin: 0; list-style: none; max-width: 74ch; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 14px; align-items: start; }
+.steps li::before { content: counter(s); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font: 500 14px var(--mono); }
+.steps p { color: var(--mute); }
+pre { margin: 10px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--bg2); border: 1px solid var(--line); font: 13px/1.65 var(--mono); overflow-x: auto; color: var(--ink); max-width: 100%; }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.plan { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 26px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.plan.pro { border-color: var(--accent); box-shadow: 0 0 60px rgba(245, 184, 46, .08); }
+.plan h3 { font: 600 14px var(--mono); letter-spacing: .22em; }
+.plan.pro h3 { color: var(--accent); }
+.plan ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.plan li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; font-size: 16px; }
+.plan li::before { content: ""; width: 14px; height: 8px; margin-top: 7px; border-left: 3px solid var(--ok); border-bottom: 3px solid var(--ok); transform: rotate(-45deg) scale(.9); }
+.plan.pro li::before { border-color: var(--accent); }
+.big { font-family: var(--head); font-size: 26px; font-weight: 600; }
+.checks { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; max-width: 74ch; }
+.checks li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; color: var(--mute); }
+.checks li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 9px; }
+.checks b { color: var(--ink); font-weight: 600; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.ok-box { border-left: 3px solid var(--ok); } .no-box { border-left: 3px solid var(--warn); }
+details { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; }
+details + details { margin-top: 10px; }
+summary { cursor: pointer; font-weight: 600; } details p { color: var(--mute); margin-top: 8px; }
+.dl { background: var(--card); border: 1px solid var(--accent); border-radius: 20px; padding: 28px; display: grid; gap: 16px; }
+.hash { font: 12px/1.5 var(--mono); color: var(--mute); word-break: break-all; }
+#durum { min-height: 22px; font-size: 14px; color: var(--ok); }
+footer { border-top: 1px solid var(--line); padding-block: 30px 56px; color: var(--mute); font-size: 13px; display: grid; gap: 6px; }
+@media (max-width: 780px) { .hero { grid-template-columns: minmax(0, 1fr); padding-block: 20px 44px; } section { padding-block: 44px; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+.lang { display: flex; gap: 4px; }
+.lang button { all: unset; cursor: pointer; font: 500 11px var(--mono); letter-spacing: .14em; color: var(--mute); padding: 5px 9px; border-radius: 999px; border: 1px solid transparent; }
+.lang button:hover { color: var(--ink); }
+.lang button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.lang button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.navr { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.cols.three { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+</style>
+<style>html,body{margin:0}body{font-size:16px}</style>
+</head><body>
+
+<div class="wrap">
+  <nav>
+    <div class="brand">OZMIRA</div>
+    <div class="links"><a href="#video" data-t="n_video">Video</a><a href="#planlar" data-t="n_planlar">Planlar</a><a href="#gizlilik" data-t="n_gizlilik">Gizlilik</a><a href="#durum-notu" data-t="n_durum">Durum</a><a href="#indir" data-t="n_indir">İndir</a></div>
+    <div class="navr"><div class="lang" role="group" aria-label="Language"><button type="button" data-lang="tr" lang="tr" aria-label="Türkçe">TR</button><button type="button" data-lang="en" lang="en" aria-label="English">EN</button><button type="button" data-lang="de" lang="de" aria-label="Deutsch">DE</button><button type="button" data-lang="es" lang="es" aria-label="Español">ES</button></div><span class="tag" data-t="tag">v0.2.0 · ilk kullanıcılar aranıyor</span></div>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <h1 data-t="h1">Yapay zekâ sistemlerini tek sahnede gör.</h1>
+      <p class="lead" data-t="lead">OZMIRA; Claude, ChatGPT, Gemini ve kendi ajanlarını bilgisayarında tek bir 3B sahnede gösterir. Bir ajan çalışmaya başlayınca merkezden ona bir sinyal gider, iş bitince geri döner ve harcanan token görünür.</p>
+      <div class="cta">
+        <a class="btn" href="#indir" data-t="cta1">Ücretsiz indir</a>
+        <a class="btn ghost" href="#video" data-t="cta2">44 saniyelik videoyu izle</a>
+      </div>
+      <p class="small" style="margin-top:16px" data-t="hero_small">Python 3.8 veya üstü gerekir. Hesap yok, bulut yok; veri bilgisayarında kalır.</p>
+    </div>
+    <div class="stage" data-ta="aria-label:stage_aria" aria-label="Üç yapay zekâ sistemi ve merkez arasında dolaşan sinyallerin çizimi">
+      <canvas id="sahne" role="img" data-ta="aria-label:canvas_aria" aria-label="Animasyonlu çizim: merkezden üç sisteme giden sinyaller"></canvas>
+      <div class="hud" data-t="hud">YEREL · CANLI</div><div class="tok" id="tok">TOPLAM TOKEN 0</div>
+    </div>
+  </header>
+
+  <section id="video">
+    <h2 data-t="video_h">44 saniyede OZMIRA</h2>
+    <div class="videobox"><video controls preload="metadata" poster="poster.jpg" playsinline><source src="ozmira-tanitim.mp4" type="video/mp4"><span data-t="video_fb">Tarayıcın videoyu oynatamıyor.</span></video></div>
+    <p class="small" data-t="video_note">Videodaki görüntüler gerçek ekran kaydı değil, anlatım için çizilmiş animasyondur. Ses, bu iş için üretilmiş bir ambiyans zeminidir. Video Türkçe yazılıdır.</p>
+  </section>
+
+  <section id="ne">
+    <h2 data-t="ne_h">Ne yapar</h2>
+    <div class="cols three">
+      <div class="box"><h3 data-t="b1h">Tek sahne</h3><p data-t="b1p">Her sistem kendi renginde ve biçiminde görünür. Hepsi aynı sahnede, merkeze bağlı.</p></div>
+      <div class="box"><h3 data-t="b2h">Canlı sinyal</h3><p data-t="b2p">Ajan başlarken ve bitirirken tek satırlık bir komut gönderirsin; sinyal merkezden ajana gider, iş bitince döner.</p></div>
+      <div class="box"><h3 data-t="b3h">Token sayacı</h3><p data-t="b3p">Bitiş bildiriminde yazdığın token sayısı sahnede toplanır. Hangi sistem ne kadar harcadı bir bakışta görünür.</p></div>
+      <div class="box"><h3 data-t="b4h">Kendi ajanların</h3><p data-t="b4p">Ajan klasörünü göster, dosya adlarından ajan listesi çıksın; ya da adları elle yaz.</p></div>
+      <div class="box"><h3 data-t="b5h">Uygulama penceresi</h3><p data-t="b5p">Tarayıcı sekmesi yerine kendi penceresinde açılır; masaüstüne kısayol koyabilirsin. Chrome, Edge ya da Brave gerekir.</p></div>
+      <div class="box"><h3 data-t="b6h">Dört dil</h3><p data-t="b6p">Arayüz Türkçe, İngilizce, Almanca ve İspanyolca. Dil tarayıcından seçilir, uygulamanın içinden de değişir.</p></div>
+    </div>
+    <div class="box" style="max-width:640px">
+      <h3 data-t="styles_h">Beş görsel stil</h3>
+      <p data-t="styles"><span class="dot" style="background:var(--c1)"></span>Galaksi &nbsp; <span class="dot" style="background:var(--c2)"></span>Lif (hologram) &nbsp; <span class="dot" style="background:var(--c3)"></span>Çift sarmal &nbsp; <span class="dot" style="background:var(--c4)"></span>Kara delik &nbsp; <span class="dot" style="background:var(--accent)"></span>Küre</p>
+    </div>
+  </section>
+
+  <section id="nasil">
+    <h2 data-t="nasil_h">Nasıl çalışır</h2>
+    <ol class="steps">
+      <li><div><h3 data-t="s1h">Sistemini ekle</h3><p data-t="s1p">İlk açılıştaki sihirbazda merkezin adını seç, sistemlerini ekle. Hazır şablonlar var (Claude, ChatGPT, Gemini, Grok, Başka); ad, stil ve rengi değiştirebilirsin.</p></div></li>
+      <li><div><h3 data-t="s2h">Bağlan</h3><p data-t="s2p">Dock'taki Bağlan düğmesi sistemlerine göre hazır komutları kopyalamanı sağlar. Kendi betiklerinden ya da araçlarının çalışma öncesi ve sonrası adımlarından çağırabilirsin.</p>
+<pre>python3 ozmira.py olay claude yazar basla
+python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" style="margin-top:8px" data-t="s2note">Komut sözcükleri (olay, basla, bitti) her dilde aynıdır.</p></div></li>
+      <li><div><h3 data-t="s3h">Sahnede izle</h3><p data-t="s3p">Çalışan ajan parlar, sinyal gider ve döner, token sayacı artar. Gönderilen tek şey sistem, ajan adı, olay türü ve token sayısıdır; prompt, yanıt ya da kod gönderilmez.</p></div></li>
+    </ol>
+  </section>
+
+  <section id="planlar">
+    <h2 data-t="pl_h">Ücretsiz başla, büyüyünce Pro</h2>
+    <div class="plans">
+      <div class="plan">
+        <h3 data-t="pl_free">ÜCRETSİZ</h3>
+        <div class="big">0</div>
+        <ul>
+          <li data-t="f1">En fazla 2 yapay zekâ sistemi</li>
+          <li data-t="f2">Toplam en fazla 7 ajan</li>
+          <li data-t="f3">Galaksi ve Küre stilleri</li>
+          <li data-t="f4">3B sahne, olay bildirme, token sayacı, yerel çalışma</li>
+        </ul>
+      </div>
+      <div class="plan pro">
+        <h3>PRO</h3>
+        <div class="big" data-t="pro_price">Fiyat henüz belirlenmedi</div>
+        <ul>
+          <li data-t="p1">Yapay zekâ sistemi sayısında ücretli sınır yok*</li>
+          <li data-t="p2">Ajan sayısında ücretli sınır yok*</li>
+          <li data-t="p3">Beş stilin hepsi</li>
+          <li data-t="p4">Lisans anahtarı bu bilgisayarda çevrimdışı doğrulanır</li>
+        </ul>
+      </div>
+    </div>
+    <p class="small" data-t="pl_n1">* Pro'da ücretli bir sınır yoktur; sahne akıcı kalsın diye yalnızca teknik bir tavan vardır: 24 sistem ve sistem başına 200 ajan. Pro satışı henüz açık değil; ödeme altyapısı kurulmadı.</p>
+    <p class="small" data-t="pl_n2">Ücretsiz sürümde 7'den fazla ajanın olursa sahnede ilk 7'si görünür, fazlası "+N ajan" notuyla belirtilir; hiçbir şey silinmez.</p>
+  </section>
+
+  <section id="gizlilik">
+    <h2 data-t="gz_h">Gizlilik</h2>
+    <ul class="checks">
+      <li><span data-t="g1"><b>Hesap yok, bulut yok.</b> Sistem tanımların, olayların ve erişim anahtarın yalnızca senin bilgisayarında durur.</span></li>
+      <li><span data-t="g2"><b>Ağa kapalı.</b> Sunucu yalnızca bu bilgisayarı dinler; başka bilgisayarlar bağlanamaz. Her istek rastgele üretilen bir anahtar ister.</span></li>
+      <li><span data-t="g3"><b>Paylaşım varsayılan olarak kapalı.</b> İzin verirsen günde en çok bir kez sürüm, plan, rastgele kurulum kimliği ve sayaçlar anonim olarak gönderilir. Sistem adların, ajan adların, iş etiketlerin, klasör yolların, token miktarların ve IP adresin gönderilmez.</span></li>
+      <li><span data-t="g4"><b>Tek dış bağlantı:</b> 3B kütüphane (three.js) jsdelivr'dan yüklenir. <code>python3 ozmira.py vendor</code> komutuyla bir kez indirip sonrasında internetsiz çalıştırabilirsin.</span></li>
+    </ul>
+  </section>
+
+  <section id="durum-notu">
+    <h2 data-t="du_h">Durum: ne denendi, ne denenmedi</h2>
+    <p class="sub" data-t="du_sub">OZMIRA 0.2.0 yeni ve küçük bir ilk sürüm. Seni şaşırtmamak için açık yazıyorum.</p>
+    <div class="two">
+      <div class="box ok-box"><h3 data-t="du_ok_h">Denendi</h3><p data-t="du_ok">276 otomatik sınama geçiyor (sunucu, plan sınırları, dört dil, uygulama penceresi, arayüz akışları gerçek bir tarayıcıda). Sahne, tek bir Windows bilgisayarda gerçek ekran kartıyla elle açılıp görüldü.</p></div>
+      <div class="box no-box"><h3 data-t="du_no_h">Henüz denenmedi</h3><p data-t="du_no">macOS ve Linux'ta elle kullanım, masaüstü kısayol komutunun Windows ve macOS'ta çalışması, farklı ekran kartları, 8'den fazla sistemin sahnede yerleşimi (gerçek ekran kartında) ve Pro'nun gerçek bir satış akışı. Çeviriler yapay zekâ ile hazırlandı; ana dili konuşan biri henüz gözden geçirmedi. Sorun yaşarsan uygulamadaki Geri bildirim penceresinden yaz.</p></div>
+    </div>
+  </section>
+
+  <section id="indir">
+    <h2 data-t="in_h">İndir ve dene</h2>
+    <div class="dl">
+      <div>
+        <h3>ozmira-app.zip</h3>
+        <p class="small" data-t="in_meta">Sürüm 0.2.0 · yaklaşık 143 KB · ücretsiz sürüm</p>
+      </div>
+      <div class="cta" style="margin-top:0">
+        <a class="btn" id="zip" href="ozmira-app.zip" download data-t="in_btn">Ücretsiz indir (zip)</a>
+        
+      </div>
+      <details id="tek"><summary data-t="tek_s">Dosyaları tek tek al</summary>
+        <p data-t="tek_p">Zip kaydedilemiyorsa her dosyayı ayrı kaydedebilirsin. Dosyaları aynı adlarla, aşağıdaki klasör düzeninde bir klasöre koy ve her adın sonundaki <code>.txt</code> uzantısını sil. Simge dosyaları (<code>ozmira.ico</code>, <code>web/icon.png</code>) yalnızca zip içindedir; onlar olmadan da uygulama çalışır.</p>
+        <p class="small" style="margin-top:10px"><a href="kaynak/ozmira.py.txt">ozmira.py</a> · <a href="kaynak/ozmira.bat.txt">ozmira.bat</a> · <a href="kaynak/ozmira.command.txt">ozmira.command</a> · <a href="kaynak/ozmira.sh.txt">ozmira.sh</a> · <a href="kaynak/ozmira-uygulama.bat.txt">ozmira-uygulama.bat</a> · <a href="kaynak/ozmira-uygulama.command.txt">ozmira-uygulama.command</a> · <a href="kaynak/ozmira-uygulama.sh.txt">ozmira-uygulama.sh</a><br>README: <a href="kaynak/README.md">TR</a> · <a href="kaynak/README.en.md">EN</a> · <a href="kaynak/README.de.md">DE</a> · <a href="kaynak/README.es.md">ES</a><br><code>web/</code> <span data-t="tek_web">klasörüne:</span> <a href="kaynak/web/index.html.txt">index.html</a> · <a href="kaynak/web/app.js.txt">app.js</a> · <a href="kaynak/web/i18n.js.txt">i18n.js</a> · <a href="kaynak/web/sahne.js.txt">sahne.js</a> · <a href="kaynak/web/stil.css">stil.css</a> · <a href="kaynak/web/icon.svg.txt">icon.svg</a></p></details>
+      <div class="hash">SHA-256: dba9a3f764856816a4fc3e8967fa3fdce74c738434b9c29594d12c18ff7c25c1</div>
+    </div>
+    <ol class="steps">
+      <li><div><h3 data-t="i1h">Zip'i aç</h3><p data-t="i1p">Klasörü istediğin yere çıkar. Python 3.8 veya üstü kurulu olmalı; başka kurulum yok.</p></div></li>
+      <li><div><h3 data-t="i2h">Başlat</h3><p data-t="i2p">Windows'ta <code>ozmira.bat</code>, macOS'ta <code>ozmira.command</code> (ilk seferde sağ tık, Aç), Linux'ta <code>./ozmira.sh</code>. Uygulama penceresi için <code>ozmira-uygulama.bat</code> / <code>.command</code> / <code>.sh</code>. Ya da <code>python3 ozmira.py</code>. Windows imzasız betik için uyarı gösterebilir; dosyaların hepsi okunabilir metindir, çalıştırmadan önce açıp bakabilirsin.</p></div></li>
+      <li><div><h3 data-t="i3h">Sihirbazı izle</h3><p data-t="i3p">Tarayıcı kendiliğinden açılır. Açılmazsa terminalde yazan adrese git (varsayılan: <code>http://localhost:8787/</code>). Dili dock'taki TR / EN / DE / ES düğmesinden değiştirirsin.</p></div></li>
+    </ol>
+  </section>
+
+  <section id="sss">
+    <h2 data-t="sss_h">Sık sorulanlar</h2>
+    <div>
+      <details><summary data-t="q1s">Python şart mı?</summary><p data-t="q1p">Evet. Uygulama yalnızca Python'un standart kütüphanesini kullanır; ek paket kurmazsın.</p></details>
+      <details><summary data-t="q2s">Bu bir .exe mi?</summary><p data-t="q2p">Hayır. Windows'ta ozmira-uygulama.bat ya da <code>python ozmira.py kisayol</code> ile masaüstü kısayolu uygulama gibi açılır, ama bu bir kısayoldur; tek dosyalık kurulum programı henüz yok.</p></details>
+      <details><summary data-t="q3s">Verilerim nerede duruyor?</summary><p data-t="q3p">Ev dizinindeki <code>.ozmira</code> klasöründe. Uygulamayı durdurup bu klasörü silersen her şey sıfırlanır.</p></details>
+      <details><summary data-t="q4s">Telefondan bakabilir miyim?</summary><p data-t="q4p">İsteğe bağlı bir <code>--lan</code> modu var; aynı ağdaki herkes sunucuya ulaşabildiği için kafe, otel, okul gibi ortak ağlarda kullanma.</p></details>
+      <details><summary data-t="q5s">Pro'yu nasıl alırım?</summary><p data-t="q5p">Pro satışı henüz açık değil, fiyat belirlenmedi. Açıldığında bu sayfada duyurulur.</p></details>
+      <details><summary data-t="q6s">OZMIRA yapay zekâ sistemlerime bağlanıyor mu?</summary><p data-t="q6p">Hayır. OZMIRA sistemlerine kendiliğinden bağlanmaz; ajan çalışmaya başlarken ve bitirirken ona komutla haber verirsin.</p></details>
+    </div>
+  </section>
+
+  <footer>
+    <div data-t="ft1">OZMIRA 0.2.0 · bağımsız yapım · ilk deneyenlerden geri bildirim bekleniyor</div>
+    <div data-t="ft2">Geri bildirim: uygulamadaki Hesap penceresinden "Geri bildirim yaz". Yazdıkların bu bilgisayardaki veri klasörüne kaydedilir; gönderim yalnızca senin izninle yapılır.</div>
+  </footer>
+</div>
+
+<script>
+// Dil: Türkçe metin sayfadaki varsayılandır; diğer diller sözlükten gelir. Sözlük bizim yazdığımız sabit metindir (HTML içerebilir).
+(function () {
+  var LANGS = ['tr', 'en', 'de', 'es'];
+  var D = {"n_video": ["Video", "Video", "Vídeo"], "n_planlar": ["Plans", "Pläne", "Planes"], "n_gizlilik": ["Privacy", "Datenschutz", "Privacidad"], "n_durum": ["Status", "Status", "Estado"], "n_indir": ["Download", "Download", "Descargar"], "tag": ["v0.2.0 · looking for first users", "v0.2.0 · erste Nutzer gesucht", "v0.2.0 · buscamos primeros usuarios"], "h1": ["See your AI systems in one scene.", "Sieh deine KI-Systeme in einer Szene.", "Mira tus sistemas de IA en una sola escena."], "lead": ["OZMIRA shows Claude, ChatGPT, Gemini and your own agents in a single 3D scene on your computer. When an agent starts working, a signal travels from the center to it, returns when the job is done, and the tokens spent become visible.", "OZMIRA zeigt Claude, ChatGPT, Gemini und deine eigenen Agenten in einer einzigen 3D-Szene auf deinem Computer. Beginnt ein Agent zu arbeiten, läuft ein Signal vom Zentrum zu ihm, kehrt nach getaner Arbeit zurück, und die verbrauchten Tokens werden sichtbar.", "OZMIRA muestra Claude, ChatGPT, Gemini y tus propios agentes en una única escena 3D en tu equipo. Cuando un agente empieza a trabajar, una señal viaja desde el centro hasta él, regresa cuando termina el trabajo y los tokens gastados se hacen visibles."], "cta1": ["Download free", "Kostenlos herunterladen", "Descargar gratis"], "cta2": ["Watch the 44-second video", "Das 44-Sekunden-Video ansehen", "Ver el vídeo de 44 segundos"], "hero_small": ["Requires Python 3.8 or later. No account, no cloud; your data stays on your computer.", "Python 3.8 oder neuer erforderlich. Kein Konto, keine Cloud; deine Daten bleiben auf deinem Computer.", "Requiere Python 3.8 o superior. Sin cuenta ni nube; tus datos se quedan en tu equipo."], "stage_aria": ["Drawing of signals travelling between three AI systems and the center", "Zeichnung von Signalen zwischen drei KI-Systemen und dem Zentrum", "Dibujo de señales que viajan entre tres sistemas de IA y el centro"], "canvas_aria": ["Animated drawing: signals from the center to three systems", "Animierte Zeichnung: Signale vom Zentrum zu drei Systemen", "Dibujo animado: señales del centro a tres sistemas"], "hud": ["LOCAL · LIVE", "LOKAL · LIVE", "LOCAL · EN VIVO"], "tok": ["TOTAL TOKENS", "TOKENS GESAMT", "TOKENS TOTALES"], "video_h": ["OZMIRA in 44 seconds", "OZMIRA in 44 Sekunden", "OZMIRA en 44 segundos"], "video_fb": ["Your browser cannot play the video.", "Dein Browser kann das Video nicht abspielen.", "Tu navegador no puede reproducir el vídeo."], "video_note": ["The pictures in the video are not a real screen recording; they are an animation drawn for explanation. The sound is an ambient bed made for this. The video text is in Turkish.", "Die Bilder im Video sind keine echte Bildschirmaufnahme, sondern eine zur Erklärung gezeichnete Animation. Der Ton ist eine eigens erzeugte Ambient-Spur. Die Texte im Video sind türkisch.", "Las imágenes del vídeo no son una grabación real de pantalla, sino una animación dibujada para explicar. El sonido es un fondo ambiental creado para esto. Los textos del vídeo están en turco."], "ne_h": ["What it does", "Was es tut", "Qué hace"], "b1h": ["One scene", "Eine Szene", "Una escena"], "b1p": ["Each system appears in its own color and shape. All in the same scene, connected to the center.", "Jedes System erscheint in eigener Farbe und Form. Alle in derselben Szene, mit dem Zentrum verbunden.", "Cada sistema aparece con su propio color y forma. Todos en la misma escena, conectados al centro."], "b2h": ["Live signal", "Live-Signal", "Señal en vivo"], "b2p": ["When an agent starts and finishes you send a one-line command; the signal goes from the center to the agent and returns when the job is done.", "Wenn ein Agent startet und fertig ist, sendest du einen einzeiligen Befehl; das Signal läuft vom Zentrum zum Agenten und kehrt nach getaner Arbeit zurück.", "Cuando un agente empieza y termina, envías un comando de una línea; la señal va del centro al agente y vuelve al terminar el trabajo."], "b3h": ["Token counter", "Token-Zähler", "Contador de tokens"], "b3p": ["The token count you give at the finish notice is added up in the scene. You see at a glance how much each system spent.", "Die Token-Zahl, die du bei der Fertigmeldung angibst, wird in der Szene summiert. Auf einen Blick siehst du, wie viel jedes System verbraucht hat.", "El número de tokens que indicas al avisar del final se suma en la escena. Ves de un vistazo cuánto gastó cada sistema."], "b4h": ["Your own agents", "Deine eigenen Agenten", "Tus propios agentes"], "b4p": ["Point to an agent folder and the file names become the agent list; or type the names by hand.", "Zeige auf einen Agentenordner, und aus den Dateinamen wird die Agentenliste; oder tippe die Namen von Hand ein.", "Señala una carpeta de agentes y los nombres de archivo forman la lista; o escribe los nombres a mano."], "b5h": ["App window", "App-Fenster", "Ventana de aplicación"], "b5p": ["Opens in its own window instead of a browser tab; you can put a shortcut on the desktop. Needs Chrome, Edge or Brave.", "Öffnet sich in einem eigenen Fenster statt in einem Browser-Tab; du kannst eine Verknüpfung auf den Desktop legen. Chrome, Edge oder Brave erforderlich.", "Se abre en su propia ventana en lugar de una pestaña del navegador; puedes poner un acceso directo en el escritorio. Necesita Chrome, Edge o Brave."], "b6h": ["Four languages", "Vier Sprachen", "Cuatro idiomas"], "b6p": ["The interface is in Turkish, English, German and Spanish. The language is picked from your browser and can be changed inside the app.", "Die Oberfläche gibt es auf Türkisch, Englisch, Deutsch und Spanisch. Die Sprache wird aus dem Browser übernommen und lässt sich in der App ändern.", "La interfaz está en turco, inglés, alemán y español. El idioma se toma del navegador y se puede cambiar dentro de la aplicación."], "styles_h": ["Five visual styles", "Fünf visuelle Stile", "Cinco estilos visuales"], "styles": ["<span class=\"dot\" style=\"background:var(--c1)\"></span>Galaxy &nbsp; <span class=\"dot\" style=\"background:var(--c2)\"></span>Fiber (hologram) &nbsp; <span class=\"dot\" style=\"background:var(--c3)\"></span>Double helix &nbsp; <span class=\"dot\" style=\"background:var(--c4)\"></span>Black hole &nbsp; <span class=\"dot\" style=\"background:var(--accent)\"></span>Sphere", "<span class=\"dot\" style=\"background:var(--c1)\"></span>Galaxie &nbsp; <span class=\"dot\" style=\"background:var(--c2)\"></span>Faser (Hologramm) &nbsp; <span class=\"dot\" style=\"background:var(--c3)\"></span>Doppelhelix &nbsp; <span class=\"dot\" style=\"background:var(--c4)\"></span>Schwarzes Loch &nbsp; <span class=\"dot\" style=\"background:var(--accent)\"></span>Kugel", "<span class=\"dot\" style=\"background:var(--c1)\"></span>Galaxia &nbsp; <span class=\"dot\" style=\"background:var(--c2)\"></span>Fibra (holograma) &nbsp; <span class=\"dot\" style=\"background:var(--c3)\"></span>Doble hélice &nbsp; <span class=\"dot\" style=\"background:var(--c4)\"></span>Agujero negro &nbsp; <span class=\"dot\" style=\"background:var(--accent)\"></span>Esfera"], "nasil_h": ["How it works", "So funktioniert es", "Cómo funciona"], "s1h": ["Add your system", "System hinzufügen", "Añade tu sistema"], "s1p": ["In the wizard on first start, name the center and add your systems. There are ready templates (Claude, ChatGPT, Gemini, Grok, Other); you can change name, style and color.", "Benenne im Assistenten beim ersten Start das Zentrum und füge deine Systeme hinzu. Es gibt fertige Vorlagen (Claude, ChatGPT, Gemini, Grok, Andere); Name, Stil und Farbe lassen sich ändern.", "En el asistente del primer inicio, ponle nombre al centro y añade tus sistemas. Hay plantillas listas (Claude, ChatGPT, Gemini, Grok, Otro); puedes cambiar nombre, estilo y color."], "s2h": ["Connect", "Verbinden", "Conectar"], "s2p": ["The Connect button in the dock lets you copy ready-made commands for your systems. You can call them from your own scripts or from the before and after steps of your tools.", "Mit der Schaltfläche Verbinden im Dock kopierst du fertige Befehle für deine Systeme. Du kannst sie aus eigenen Skripten oder aus den Vor- und Nachbereitungsschritten deiner Werkzeuge aufrufen.", "El botón Conectar del dock te permite copiar comandos ya preparados para tus sistemas. Puedes llamarlos desde tus propios scripts o desde los pasos previos y posteriores de tus herramientas."], "s2note": ["The command words (olay, basla, bitti) are the same in every language.", "Die Befehlswörter (olay, basla, bitti) sind in jeder Sprache gleich.", "Las palabras de los comandos (olay, basla, bitti) son iguales en todos los idiomas."], "s3h": ["Watch the scene", "Szene beobachten", "Míralo en la escena"], "s3p": ["The working agent glows, the signal goes and returns, the token counter rises. The only things sent are system, agent name, event type and token count; no prompts, replies or code.", "Der aktive Agent leuchtet, das Signal läuft hin und zurück, der Token-Zähler steigt. Gesendet werden nur System, Agentenname, Ereignisart und Token-Anzahl; keine Prompts, Antworten oder Code.", "El agente en ejecución brilla, la señal va y vuelve, el contador de tokens sube. Solo se envían el sistema, el nombre del agente, el tipo de evento y el número de tokens; no se envían prompts, respuestas ni código."], "pl_h": ["Start free, go Pro when you grow", "Kostenlos starten, mit Wachstum auf Pro", "Empieza gratis, pasa a Pro cuando crezcas"], "pl_free": ["FREE", "KOSTENLOS", "GRATIS"], "f1": ["Up to 2 AI systems", "Höchstens 2 KI-Systeme", "Hasta 2 sistemas de IA"], "f2": ["Up to 7 agents in total", "Insgesamt höchstens 7 Agenten", "Hasta 7 agentes en total"], "f3": ["Galaxy and Sphere styles", "Stile Galaxie und Kugel", "Estilos Galaxia y Esfera"], "f4": ["3D scene, event reporting, token counter, local operation", "3D-Szene, Ereignismeldung, Token-Zähler, lokaler Betrieb", "Escena 3D, aviso de eventos, contador de tokens, funcionamiento local"], "pro_price": ["Price not set yet", "Preis noch nicht festgelegt", "Precio aún sin fijar"], "p1": ["No paid limit on AI systems*", "Kein kostenpflichtiges Limit bei KI-Systemen*", "Sin límite de pago en sistemas de IA*"], "p2": ["No paid limit on agents*", "Kein kostenpflichtiges Limit bei Agenten*", "Sin límite de pago en agentes*"], "p3": ["All five styles", "Alle fünf Stile", "Los cinco estilos"], "p4": ["The license key is verified offline on this computer", "Der Lizenzschlüssel wird offline auf diesem Computer geprüft", "La clave de licencia se verifica sin conexión en este equipo"], "pl_n1": ["* Pro has no paid limit; there is only a technical ceiling so the scene stays smooth: 24 systems and 200 agents per system. Pro is not on sale yet; no payment system has been set up.", "* In Pro gibt es kein kostenpflichtiges Limit; nur eine technische Obergrenze, damit die Szene flüssig bleibt: 24 Systeme und 200 Agenten pro System. Pro ist noch nicht im Verkauf; ein Zahlungssystem ist nicht eingerichtet.", "* En Pro no hay un límite de pago; solo un tope técnico para que la escena fluya: 24 sistemas y 200 agentes por sistema. Pro aún no está a la venta; no se ha configurado un sistema de pago."], "pl_n2": ["On the free version, if you have more than 7 agents the first 7 appear in the scene and the rest is noted as \"+N agents\"; nothing is deleted.", "Hast du in der kostenlosen Version mehr als 7 Agenten, erscheinen die ersten 7 in der Szene, der Rest wird als „+N Agenten“ vermerkt; nichts wird gelöscht.", "En la versión gratuita, si tienes más de 7 agentes, aparecen los primeros 7 en la escena y el resto se indica como «+N agentes»; no se borra nada."], "gz_h": ["Privacy", "Datenschutz", "Privacidad"], "g1": ["<b>No account, no cloud.</b> Your system definitions, events and access key stay on your computer only.", "<b>Kein Konto, keine Cloud.</b> Deine Systemdefinitionen, Ereignisse und dein Zugangsschlüssel bleiben nur auf deinem Computer.", "<b>Sin cuenta ni nube.</b> Las definiciones de tus sistemas, los eventos y tu clave de acceso se quedan solo en tu equipo."], "g2": ["<b>Closed to the network.</b> The server listens on this computer only; other computers cannot connect. Every request needs a randomly generated key.", "<b>Nach außen geschlossen.</b> Der Server lauscht nur auf diesem Computer; andere Computer können sich nicht verbinden. Jede Anfrage verlangt einen zufällig erzeugten Schlüssel.", "<b>Cerrada a la red.</b> El servidor solo escucha en este equipo; otros equipos no pueden conectarse. Cada petición exige una clave generada al azar."], "g3": ["<b>Sharing is off by default.</b> If you allow it, at most once a day the version, plan, a random installation ID and counters are sent anonymously. Your system names, agent names, task labels, folder paths, token amounts and IP address are not sent.", "<b>Teilen ist standardmäßig aus.</b> Wenn du es erlaubst, werden höchstens einmal täglich Version, Plan, eine zufällige Installations-ID und Zähler anonym gesendet. Deine Systemnamen, Agentennamen, Aufgabenbezeichnungen, Ordnerpfade, Token-Mengen und deine IP-Adresse werden nicht gesendet.", "<b>Compartir está desactivado por defecto.</b> Si lo permites, como máximo una vez al día se envían de forma anónima la versión, el plan, un ID de instalación aleatorio y contadores. No se envían los nombres de tus sistemas ni de tus agentes, las etiquetas de tarea, las rutas de carpetas, las cantidades de tokens ni tu dirección IP."], "g4": ["<b>Only external connection:</b> the 3D library (three.js) is loaded from jsdelivr. With <code>python3 ozmira.py vendor</code> you can download it once and then run without internet.", "<b>Einzige externe Verbindung:</b> Die 3D-Bibliothek (three.js) wird von jsdelivr geladen. Mit <code>python3 ozmira.py vendor</code> lädst du sie einmal herunter und kannst danach ohne Internet arbeiten.", "<b>Única conexión externa:</b> la biblioteca 3D (three.js) se carga desde jsdelivr. Con <code>python3 ozmira.py vendor</code> puedes descargarla una vez y luego trabajar sin internet."], "du_h": ["Status: what was tested, what was not", "Status: was getestet wurde, was nicht", "Estado: qué se probó y qué no"], "du_sub": ["OZMIRA 0.2.0 is a new, small first version. I am writing this openly so nothing surprises you.", "OZMIRA 0.2.0 ist eine neue, kleine erste Version. Ich schreibe das offen, damit dich nichts überrascht.", "OZMIRA 0.2.0 es una primera versión nueva y pequeña. Lo escribo con claridad para que nada te sorprenda."], "du_ok_h": ["Tested", "Getestet", "Probado"], "du_ok": ["276 automated tests pass (server, plan limits, four languages, app window, interface flows in a real browser). The scene was opened and seen by hand on a single Windows computer with a real graphics card.", "276 automatische Tests bestehen (Server, Plangrenzen, vier Sprachen, App-Fenster, Oberflächenabläufe in einem echten Browser). Die Szene wurde auf einem einzelnen Windows-Computer mit echter Grafikkarte von Hand geöffnet und gesehen.", "Pasan 276 pruebas automáticas (servidor, límites de plan, cuatro idiomas, ventana de aplicación, flujos de la interfaz en un navegador real). La escena se abrió y se vio a mano en un único equipo Windows con tarjeta gráfica real."], "du_no_h": ["Not tested yet", "Noch nicht getestet", "Aún sin probar"], "du_no": ["Hands-on use on macOS and Linux, the desktop shortcut command on Windows and macOS, different graphics cards, the layout of more than 8 systems in the scene (on a real graphics card) and a real sales flow for Pro. The translations were prepared with AI; a native speaker has not reviewed them yet. If you hit a problem, write it in the app's Feedback window.", "Manuelle Nutzung unter macOS und Linux, der Verknüpfungsbefehl für den Desktop unter Windows und macOS, andere Grafikkarten, die Anordnung von mehr als 8 Systemen in der Szene (auf einer echten Grafikkarte) und ein echter Verkaufsablauf für Pro. Die Übersetzungen wurden mit KI erstellt; ein Muttersprachler hat sie noch nicht geprüft. Bei Problemen schreibe im Feedback-Fenster der App.", "Uso manual en macOS y Linux, el comando de acceso directo del escritorio en Windows y macOS, otras tarjetas gráficas, la disposición de más de 8 sistemas en la escena (en una tarjeta gráfica real) y un flujo de venta real para Pro. Las traducciones se prepararon con IA; un hablante nativo aún no las ha revisado. Si tienes un problema, escríbelo en la ventana de comentarios de la aplicación."], "in_h": ["Download and try", "Herunterladen und ausprobieren", "Descarga y prueba"], "in_meta": ["Version 0.2.0 · about 143 KB · free version", "Version 0.2.0 · etwa 143 KB · kostenlose Version", "Versión 0.2.0 · unos 143 KB · versión gratuita"], "in_btn": ["Download free (zip)", "Kostenlos herunterladen (zip)", "Descargar gratis (zip)"], "tek_s": ["Get the files one by one", "Dateien einzeln holen", "Obtener los archivos uno a uno"], "tek_p": ["If the zip cannot be saved you can save each file separately. Put the files in one folder with the same names, in the folder layout below, and delete the <code>.txt</code> extension at the end of each name. The icon files (<code>ozmira.ico</code>, <code>web/icon.png</code>) are only in the zip; the app also works without them.", "Lässt sich das Zip nicht speichern, kannst du jede Datei einzeln speichern. Lege die Dateien mit denselben Namen in der unten gezeigten Ordnerstruktur in einen Ordner und lösche die Endung <code>.txt</code> am Ende jedes Namens. Die Symboldateien (<code>ozmira.ico</code>, <code>web/icon.png</code>) sind nur im Zip enthalten; die App funktioniert auch ohne sie.", "Si no se puede guardar el zip, puedes guardar cada archivo por separado. Pon los archivos con los mismos nombres en una carpeta, con la estructura de abajo, y borra la extensión <code>.txt</code> al final de cada nombre. Los archivos de iconos (<code>ozmira.ico</code>, <code>web/icon.png</code>) solo están en el zip; la aplicación funciona también sin ellos."], "tek_web": ["folder:", "Ordner:", "carpeta:"], "i1h": ["Unzip", "Zip entpacken", "Descomprime el zip"], "i1p": ["Extract the folder anywhere you like. Python 3.8 or later must be installed; nothing else to install.", "Entpacke den Ordner, wohin du möchtest. Python 3.8 oder neuer muss installiert sein; sonst ist nichts zu installieren.", "Extrae la carpeta donde quieras. Debe estar instalado Python 3.8 o superior; no hay nada más que instalar."], "i2h": ["Start", "Starten", "Inicia"], "i2p": ["On Windows <code>ozmira.bat</code>, on macOS <code>ozmira.command</code> (first time: right-click, Open), on Linux <code>./ozmira.sh</code>. For the app window use <code>ozmira-uygulama.bat</code> / <code>.command</code> / <code>.sh</code>. Or <code>python3 ozmira.py</code>. Windows may warn about an unsigned script; all files are readable text, so you can open and read them before running.", "Unter Windows <code>ozmira.bat</code>, unter macOS <code>ozmira.command</code> (beim ersten Mal: Rechtsklick, Öffnen), unter Linux <code>./ozmira.sh</code>. Für das App-Fenster <code>ozmira-uygulama.bat</code> / <code>.command</code> / <code>.sh</code>. Oder <code>python3 ozmira.py</code>. Windows warnt eventuell vor einem unsignierten Skript; alle Dateien sind lesbarer Text, du kannst sie vor dem Ausführen öffnen und lesen.", "En Windows <code>ozmira.bat</code>, en macOS <code>ozmira.command</code> (la primera vez: clic derecho, Abrir), en Linux <code>./ozmira.sh</code>. Para la ventana de aplicación usa <code>ozmira-uygulama.bat</code> / <code>.command</code> / <code>.sh</code>. O <code>python3 ozmira.py</code>. Windows puede avisar de un script sin firmar; todos los archivos son texto legible, puedes abrirlos y leerlos antes de ejecutar."], "i3h": ["Follow the wizard", "Dem Assistenten folgen", "Sigue el asistente"], "i3p": ["The browser opens by itself. If it does not, go to the address printed in the terminal (default: <code>http://localhost:8787/</code>). Change the language with the TR / EN / DE / ES button in the dock.", "Der Browser öffnet sich von selbst. Falls nicht, rufe die im Terminal angezeigte Adresse auf (Standard: <code>http://localhost:8787/</code>). Die Sprache änderst du mit der Schaltfläche TR / EN / DE / ES im Dock.", "El navegador se abre solo. Si no, ve a la dirección que aparece en el terminal (por defecto: <code>http://localhost:8787/</code>). Cambia el idioma con el botón TR / EN / DE / ES del dock."], "sss_h": ["Frequently asked questions", "Häufige Fragen", "Preguntas frecuentes"], "q1s": ["Is Python required?", "Ist Python Pflicht?", "¿Es obligatorio Python?"], "q1p": ["Yes. The app uses only the Python standard library; you install no extra packages.", "Ja. Die App verwendet nur die Standardbibliothek von Python; du installierst keine zusätzlichen Pakete.", "Sí. La aplicación usa solo la biblioteca estándar de Python; no instalas paquetes adicionales."], "q2s": ["Is this an .exe?", "Ist das eine .exe?", "¿Es un .exe?"], "q2p": ["No. On Windows, ozmira-uygulama.bat or a desktop shortcut made with <code>python ozmira.py kisayol</code> opens like an app, but it is a shortcut; there is no single-file installer yet.", "Nein. Unter Windows öffnet sich ozmira-uygulama.bat oder eine mit <code>python ozmira.py kisayol</code> erstellte Desktop-Verknüpfung wie eine App, aber es ist eine Verknüpfung; ein Installer als einzelne Datei gibt es noch nicht.", "No. En Windows, ozmira-uygulama.bat o un acceso directo creado con <code>python ozmira.py kisayol</code> se abre como una aplicación, pero es un acceso directo; aún no hay un instalador de un solo archivo."], "q3s": ["Where is my data kept?", "Wo liegen meine Daten?", "¿Dónde se guardan mis datos?"], "q3p": ["In the <code>.ozmira</code> folder in your home directory. If you stop the app and delete this folder, everything is reset.", "Im Ordner <code>.ozmira</code> in deinem Home-Verzeichnis. Beendest du die App und löschst diesen Ordner, wird alles zurückgesetzt.", "En la carpeta <code>.ozmira</code> de tu directorio personal. Si detienes la aplicación y borras esa carpeta, todo se restablece."], "q4s": ["Can I look from my phone?", "Kann ich vom Handy aus schauen?", "¿Puedo verlo desde el teléfono?"], "q4p": ["There is an optional <code>--lan</code> mode; because anyone on the same network can reach the server, do not use it on shared networks such as cafes, hotels or schools.", "Es gibt einen optionalen Modus <code>--lan</code>; da jeder im selben Netzwerk den Server erreichen kann, nutze ihn nicht in gemeinsamen Netzen wie Café, Hotel oder Schule.", "Hay un modo opcional <code>--lan</code>; como cualquiera en la misma red puede alcanzar el servidor, no lo uses en redes compartidas como cafeterías, hoteles o escuelas."], "q5s": ["How do I get Pro?", "Wie bekomme ich Pro?", "¿Cómo consigo Pro?"], "q5p": ["Pro is not on sale yet and the price is not set. It will be announced on this page when it opens.", "Pro ist noch nicht im Verkauf, der Preis ist nicht festgelegt. Sobald es soweit ist, wird es auf dieser Seite angekündigt.", "Pro aún no está a la venta y el precio no está fijado. Se anunciará en esta página cuando se abra."], "q6s": ["Does OZMIRA connect to my AI systems?", "Verbindet sich OZMIRA mit meinen KI-Systemen?", "¿Se conecta OZMIRA a mis sistemas de IA?"], "q6p": ["No. OZMIRA does not connect to your systems on its own; you tell it with a command when an agent starts and finishes.", "Nein. OZMIRA verbindet sich nicht von selbst mit deinen Systemen; du meldest ihm per Befehl, wenn ein Agent startet und fertig ist.", "No. OZMIRA no se conecta por sí sola a tus sistemas; le avisas con un comando cuando un agente empieza y termina."], "ft1": ["OZMIRA 0.2.0 · independent project · looking for feedback from first users", "OZMIRA 0.2.0 · unabhängiges Projekt · Feedback der ersten Nutzer erwünscht", "OZMIRA 0.2.0 · proyecto independiente · se espera la opinión de los primeros usuarios"], "ft2": ["Feedback: use \"Write feedback\" in the app's Account window. What you write is saved in the data folder on this computer; it is sent only with your permission.", "Feedback: nutze „Feedback schreiben“ im Konto-Fenster der App. Was du schreibst, wird im Datenordner auf diesem Computer gespeichert; gesendet wird nur mit deiner Erlaubnis.", "Comentarios: usa «Escribir comentarios» en la ventana Cuenta de la aplicación. Lo que escribas se guarda en la carpeta de datos de este equipo; solo se envía con tu permiso."], "d_hazir": ["Preparing...", "Wird vorbereitet...", "Preparando..."], "d_yok": ["This view has no save dialog. Use the \"Get the files one by one\" section below.", "In dieser Ansicht gibt es kein Speicherfenster. Nutze unten den Abschnitt „Dateien einzeln holen“.", "Esta vista no tiene ventana para guardar. Usa abajo la sección «Obtener los archivos uno a uno»."], "d_ok": ["Saved. Unzip it and read README.en.md.", "Gespeichert. Entpacke das Zip und lies README.de.md.", "Guardado. Descomprime el zip y lee README.es.md."], "d_iptal": ["Download cancelled.", "Download abgebrochen.", "Descarga cancelada."], "d_hata": ["The download could not start. Try the \"Get the files one by one\" section below.", "Der Download konnte nicht gestartet werden. Probiere unten den Abschnitt „Dateien einzeln holen“.", "No se pudo iniciar la descarga. Prueba la sección «Obtener los archivos uno a uno» de abajo."]};
+  var TR = {"n_video": "Video", "n_planlar": "Planlar", "n_gizlilik": "Gizlilik", "n_durum": "Durum", "n_indir": "İndir", "tag": "v0.2.0 · ilk kullanıcılar aranıyor", "h1": "Yapay zekâ sistemlerini tek sahnede gör.", "lead": "OZMIRA; Claude, ChatGPT, Gemini ve kendi ajanlarını bilgisayarında tek bir 3B sahnede gösterir. Bir ajan çalışmaya başlayınca merkezden ona bir sinyal gider, iş bitince geri döner ve harcanan token görünür.", "cta1": "Ücretsiz indir", "cta2": "44 saniyelik videoyu izle", "hero_small": "Python 3.8 veya üstü gerekir. Hesap yok, bulut yok; veri bilgisayarında kalır.", "stage_aria": "Üç yapay zekâ sistemi ve merkez arasında dolaşan sinyallerin çizimi", "canvas_aria": "Animasyonlu çizim: merkezden üç sisteme giden sinyaller", "hud": "YEREL · CANLI", "tok": "TOPLAM TOKEN", "video_h": "44 saniyede OZMIRA", "video_fb": "Tarayıcın videoyu oynatamıyor.", "video_note": "Videodaki görüntüler gerçek ekran kaydı değil, anlatım için çizilmiş animasyondur. Ses, bu iş için üretilmiş bir ambiyans zeminidir. Video Türkçe yazılıdır.", "ne_h": "Ne yapar", "b1h": "Tek sahne", "b1p": "Her sistem kendi renginde ve biçiminde görünür. Hepsi aynı sahnede, merkeze bağlı.", "b2h": "Canlı sinyal", "b2p": "Ajan başlarken ve bitirirken tek satırlık bir komut gönderirsin; sinyal merkezden ajana gider, iş bitince döner.", "b3h": "Token sayacı", "b3p": "Bitiş bildiriminde yazdığın token sayısı sahnede toplanır. Hangi sistem ne kadar harcadı bir bakışta görünür.", "b4h": "Kendi ajanların", "b4p": "Ajan klasörünü göster, dosya adlarından ajan listesi çıksın; ya da adları elle yaz.", "b5h": "Uygulama penceresi", "b5p": "Tarayıcı sekmesi yerine kendi penceresinde açılır; masaüstüne kısayol koyabilirsin. Chrome, Edge ya da Brave gerekir.", "b6h": "Dört dil", "b6p": "Arayüz Türkçe, İngilizce, Almanca ve İspanyolca. Dil tarayıcından seçilir, uygulamanın içinden de değişir.", "styles_h": "Beş görsel stil", "styles": "<span class=\"dot\" style=\"background:var(--c1)\"></span>Galaksi &nbsp; <span class=\"dot\" style=\"background:var(--c2)\"></span>Lif (hologram) &nbsp; <span class=\"dot\" style=\"background:var(--c3)\"></span>Çift sarmal &nbsp; <span class=\"dot\" style=\"background:var(--c4)\"></span>Kara delik &nbsp; <span class=\"dot\" style=\"background:var(--accent)\"></span>Küre", "nasil_h": "Nasıl çalışır", "s1h": "Sistemini ekle", "s1p": "İlk açılıştaki sihirbazda merkezin adını seç, sistemlerini ekle. Hazır şablonlar var (Claude, ChatGPT, Gemini, Grok, Başka); ad, stil ve rengi değiştirebilirsin.", "s2h": "Bağlan", "s2p": "Dock'taki Bağlan düğmesi sistemlerine göre hazır komutları kopyalamanı sağlar. Kendi betiklerinden ya da araçlarının çalışma öncesi ve sonrası adımlarından çağırabilirsin.", "s2note": "Komut sözcükleri (olay, basla, bitti) her dilde aynıdır.", "s3h": "Sahnede izle", "s3p": "Çalışan ajan parlar, sinyal gider ve döner, token sayacı artar. Gönderilen tek şey sistem, ajan adı, olay türü ve token sayısıdır; prompt, yanıt ya da kod gönderilmez.", "pl_h": "Ücretsiz başla, büyüyünce Pro", "pl_free": "ÜCRETSİZ", "f1": "En fazla 2 yapay zekâ sistemi", "f2": "Toplam en fazla 7 ajan", "f3": "Galaksi ve Küre stilleri", "f4": "3B sahne, olay bildirme, token sayacı, yerel çalışma", "pro_price": "Fiyat henüz belirlenmedi", "p1": "Yapay zekâ sistemi sayısında ücretli sınır yok*", "p2": "Ajan sayısında ücretli sınır yok*", "p3": "Beş stilin hepsi", "p4": "Lisans anahtarı bu bilgisayarda çevrimdışı doğrulanır", "pl_n1": "* Pro'da ücretli bir sınır yoktur; sahne akıcı kalsın diye yalnızca teknik bir tavan vardır: 24 sistem ve sistem başına 200 ajan. Pro satışı henüz açık değil; ödeme altyapısı kurulmadı.", "pl_n2": "Ücretsiz sürümde 7'den fazla ajanın olursa sahnede ilk 7'si görünür, fazlası \"+N ajan\" notuyla belirtilir; hiçbir şey silinmez.", "gz_h": "Gizlilik", "g1": "<b>Hesap yok, bulut yok.</b> Sistem tanımların, olayların ve erişim anahtarın yalnızca senin bilgisayarında durur.", "g2": "<b>Ağa kapalı.</b> Sunucu yalnızca bu bilgisayarı dinler; başka bilgisayarlar bağlanamaz. Her istek rastgele üretilen bir anahtar ister.", "g3": "<b>Paylaşım varsayılan olarak kapalı.</b> İzin verirsen günde en çok bir kez sürüm, plan, rastgele kurulum kimliği ve sayaçlar anonim olarak gönderilir. Sistem adların, ajan adların, iş etiketlerin, klasör yolların, token miktarların ve IP adresin gönderilmez.", "g4": "<b>Tek dış bağlantı:</b> 3B kütüphane (three.js) jsdelivr'dan yüklenir. <code>python3 ozmira.py vendor</code> komutuyla bir kez indirip sonrasında internetsiz çalıştırabilirsin.", "du_h": "Durum: ne denendi, ne denenmedi", "du_sub": "OZMIRA 0.2.0 yeni ve küçük bir ilk sürüm. Seni şaşırtmamak için açık yazıyorum.", "du_ok_h": "Denendi", "du_ok": "276 otomatik sınama geçiyor (sunucu, plan sınırları, dört dil, uygulama penceresi, arayüz akışları gerçek bir tarayıcıda). Sahne, tek bir Windows bilgisayarda gerçek ekran kartıyla elle açılıp görüldü.", "du_no_h": "Henüz denenmedi", "du_no": "macOS ve Linux'ta elle kullanım, masaüstü kısayol komutunun Windows ve macOS'ta çalışması, farklı ekran kartları, 8'den fazla sistemin sahnede yerleşimi (gerçek ekran kartında) ve Pro'nun gerçek bir satış akışı. Çeviriler yapay zekâ ile hazırlandı; ana dili konuşan biri henüz gözden geçirmedi. Sorun yaşarsan uygulamadaki Geri bildirim penceresinden yaz.", "in_h": "İndir ve dene", "in_meta": "Sürüm 0.2.0 · yaklaşık 143 KB · ücretsiz sürüm", "in_btn": "Ücretsiz indir (zip)", "tek_s": "Dosyaları tek tek al", "tek_p": "Zip kaydedilemiyorsa her dosyayı ayrı kaydedebilirsin. Dosyaları aynı adlarla, aşağıdaki klasör düzeninde bir klasöre koy ve her adın sonundaki <code>.txt</code> uzantısını sil. Simge dosyaları (<code>ozmira.ico</code>, <code>web/icon.png</code>) yalnızca zip içindedir; onlar olmadan da uygulama çalışır.", "tek_web": "klasörüne:", "i1h": "Zip'i aç", "i1p": "Klasörü istediğin yere çıkar. Python 3.8 veya üstü kurulu olmalı; başka kurulum yok.", "i2h": "Başlat", "i2p": "Windows'ta <code>ozmira.bat</code>, macOS'ta <code>ozmira.command</code> (ilk seferde sağ tık, Aç), Linux'ta <code>./ozmira.sh</code>. Uygulama penceresi için <code>ozmira-uygulama.bat</code> / <code>.command</code> / <code>.sh</code>. Ya da <code>python3 ozmira.py</code>. Windows imzasız betik için uyarı gösterebilir; dosyaların hepsi okunabilir metindir, çalıştırmadan önce açıp bakabilirsin.", "i3h": "Sihirbazı izle", "i3p": "Tarayıcı kendiliğinden açılır. Açılmazsa terminalde yazan adrese git (varsayılan: <code>http://localhost:8787/</code>). Dili dock'taki TR / EN / DE / ES düğmesinden değiştirirsin.", "sss_h": "Sık sorulanlar", "q1s": "Python şart mı?", "q1p": "Evet. Uygulama yalnızca Python'un standart kütüphanesini kullanır; ek paket kurmazsın.", "q2s": "Bu bir .exe mi?", "q2p": "Hayır. Windows'ta ozmira-uygulama.bat ya da <code>python ozmira.py kisayol</code> ile masaüstü kısayolu uygulama gibi açılır, ama bu bir kısayoldur; tek dosyalık kurulum programı henüz yok.", "q3s": "Verilerim nerede duruyor?", "q3p": "Ev dizinindeki <code>.ozmira</code> klasöründe. Uygulamayı durdurup bu klasörü silersen her şey sıfırlanır.", "q4s": "Telefondan bakabilir miyim?", "q4p": "İsteğe bağlı bir <code>--lan</code> modu var; aynı ağdaki herkes sunucuya ulaşabildiği için kafe, otel, okul gibi ortak ağlarda kullanma.", "q5s": "Pro'yu nasıl alırım?", "q5p": "Pro satışı henüz açık değil, fiyat belirlenmedi. Açıldığında bu sayfada duyurulur.", "q6s": "OZMIRA yapay zekâ sistemlerime bağlanıyor mu?", "q6p": "Hayır. OZMIRA sistemlerine kendiliğinden bağlanmaz; ajan çalışmaya başlarken ve bitirirken ona komutla haber verirsin.", "ft1": "OZMIRA 0.2.0 · bağımsız yapım · ilk deneyenlerden geri bildirim bekleniyor", "ft2": "Geri bildirim: uygulamadaki Hesap penceresinden \"Geri bildirim yaz\". Yazdıkların bu bilgisayardaki veri klasörüne kaydedilir; gönderim yalnızca senin izninle yapılır.", "d_hazir": "Hazırlanıyor...", "d_yok": "Bu görünümde kaydetme penceresi yok. Aşağıdaki \"Dosyaları tek tek al\" bölümünü kullan.", "d_ok": "Kaydedildi. Zip'i aç ve README.md dosyasını oku.", "d_iptal": "İndirme iptal edildi.", "d_hata": "İndirme başlatılamadı. Aşağıdaki \"Dosyaları tek tek al\" bölümünü dene."};
+  function pick() {
+    var s = null; try { s = localStorage.getItem('ozmira-site-dil'); } catch (_) {}
+    if (LANGS.indexOf(s) >= 0) return s;
+    var n = ((navigator.languages && navigator.languages[0]) || navigator.language || 'en').slice(0, 2).toLowerCase();
+    return LANGS.indexOf(n) >= 0 ? n : 'en';
+  }
+  window.LANG = pick();
+  window.T = function (k) { var l = window.LANG; if (l === 'tr') return TR[k] || k; var v = D[k]; return v ? v[LANGS.indexOf(l) - 1] : (TR[k] || k); };
+  function apply() {
+    document.documentElement.lang = window.LANG;
+    var els = document.querySelectorAll('[data-t]'); for (var i = 0; i < els.length; i++) els[i].innerHTML = window.T(els[i].getAttribute('data-t'));
+    var al = document.querySelectorAll('[data-ta]'); for (var j = 0; j < al.length; j++) { var p = al[j].getAttribute('data-ta').split(':'); al[j].setAttribute(p[0], window.T(p[1])); }
+    var bs = document.querySelectorAll('.lang button'); for (var b = 0; b < bs.length; b++) bs[b].setAttribute('aria-pressed', bs[b].getAttribute('data-lang') === window.LANG ? 'true' : 'false');
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('.lang button'); if (!b) return;
+    window.LANG = b.getAttribute('data-lang'); try { localStorage.setItem('ozmira-site-dil', window.LANG); } catch (_) {}
+    apply();
+  });
+  apply();
+})();
+
+// Açılış çizimi: gerçek uygulamanın sahnesi değil, anlatım amaçlı küçük bir canlandırma.
+(function () {
+  var cv = document.getElementById('sahne'), tokEl = document.getElementById('tok');
+  var ctx = cv.getContext('2d'), S = 460, dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = S * dpr; cv.height = S * dpr; ctx.scale(dpr, dpr);
+  var CEN = { x: 230, y: 215 };
+  function rnd(seed) { var s = seed; return function () { s = (s * 16807) % 2147483647; return s / 2147483647; }; }
+  var R = rnd(42);
+  var SYS = [
+    { x: 95, y: 130, col: [77, 141, 255], kind: 0, n: 5, P: [] },
+    { x: 365, y: 125, col: [255, 138, 61], kind: 1, n: 4, P: [] },
+    { x: 230, y: 355, col: [192, 107, 255], kind: 2, n: 3, P: [] }
+  ];
+  SYS.forEach(function (s) {
+    for (var i = 0; i < 70; i++) {
+      if (s.kind === 0) { var r = 6 + Math.pow(i / 70, .8) * 52, th = r * .12 + (i % 2) * Math.PI + (R() - .5) * .4; s.P.push([r * Math.cos(th), r * Math.sin(th), 0]); }
+      else if (s.kind === 1) { var y = (R() - .5) * 110, sg = 9 * (1 - Math.abs(y) / 70) + 1.5; s.P.push([(R() + R() + R() - 1.5) * sg * 2, y, (R() - .5) * sg]); }
+      else { var yy = -55 + i / 70 * 110, a = yy * .11, st = (i % 2) * Math.PI; s.P.push([22 * Math.cos(a + st), yy, 22 * Math.sin(a + st)]); }
+    }
+  });
+  function col(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+  function glow(x, y, r, c, a) { var g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, col(c, a)); g.addColorStop(1, col(c, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill(); }
+  function agent(si, ai, t) { var s = SYS[si], ang = ai / s.n * 6.2832 + t * .25 + si, rx = s.kind === 0 ? 66 : s.kind === 1 ? 44 : 46, ry = s.kind === 0 ? 38 : s.kind === 1 ? 62 : 56; return [s.x + rx * Math.cos(ang), s.y + ry * Math.sin(ang)]; }
+  function along(pts, k) { var L = [], tot = 0, i; for (i = 0; i < pts.length - 1; i++) { var d = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]); L.push(d); tot += d; } var d0 = k * tot; for (i = 0; i < L.length; i++) { if (d0 <= L[i] || i === L.length - 1) { var u = Math.min(1, d0 / L[i]); return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u]; } d0 -= L[i]; } }
+  var OLAY = [], tokTotal = 0, nextAt = 0.6, dur = 3.2, picks = [[0, 1], [1, 2], [2, 0], [0, 3], [1, 0], [2, 2]], pi = 0, toks = [1200, 2400, 800, 3100, 1500, 900];
+  function ease(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+  function draw(t) {
+    ctx.clearRect(0, 0, S, S); ctx.globalCompositeOperation = 'lighter';
+    while (t >= nextAt) { var p = picks[pi % picks.length]; OLAY.push({ t0: nextAt, si: p[0], ai: p[1] % SYS[p[0]].n, tok: toks[pi % toks.length], done: false }); pi++; nextAt += 1.5; }
+    SYS.forEach(function (s, si) {
+      ctx.strokeStyle = col(s.col, .18); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(CEN.x, CEN.y); ctx.lineTo(s.x, s.y); ctx.stroke();
+      glow(s.x, s.y, 80, s.col, .22); glow(s.x, s.y, 24, s.col, .35);
+      var a = t * (s.kind === 0 ? .35 : .8), c = Math.cos(a), sn = Math.sin(a);
+      s.P.forEach(function (q) {
+        var x, y; if (s.kind === 0) { x = q[0] * c - q[1] * sn; y = (q[0] * sn + q[1] * c) * .5; } else { x = q[0] * c + q[2] * sn; y = q[1]; }
+        ctx.fillStyle = col([Math.min(255, s.col[0] + 70), Math.min(255, s.col[1] + 70), Math.min(255, s.col[2] + 70)], .6); ctx.fillRect(s.x + x - 1, s.y + y - 1, 2, 2);
+      });
+    });
+    var pulse = 1 + .06 * Math.sin(t * 2.2); glow(CEN.x, CEN.y, 64 * pulse, [245, 184, 46], .5); glow(CEN.x, CEN.y, 22, [255, 236, 190], .9);
+    ctx.fillStyle = 'rgba(255,244,220,.95)'; ctx.beginPath(); ctx.arc(CEN.x, CEN.y, 11, 0, 6.2832); ctx.fill();
+    SYS.forEach(function (s, si) { for (var ai = 0; ai < s.n; ai++) { var p = agent(si, ai, t), on = OLAY.some(function (o) { return o.si === si && o.ai === ai && t >= o.t0 && t <= o.t0 + dur; }); if (on) glow(p[0], p[1], 26, s.col, .9); ctx.fillStyle = on ? '#fff' : col(s.col, .9); ctx.beginPath(); ctx.arc(p[0], p[1], on ? 5 : 3.2, 0, 6.2832); ctx.fill(); } });
+    OLAY.forEach(function (o) {
+      if (t > o.t0 + dur) { if (!o.done) { o.done = true; tokTotal += o.tok; } return; }
+      if (t < o.t0) return;
+      var p = agent(o.si, o.ai, t), pts = [[CEN.x, CEN.y], [SYS[o.si].x, SYS[o.si].y], p], out = ease((t - o.t0) / 1.0), back = ease((t - (o.t0 + dur - 1.0)) / 1.0), k = back <= 0 ? out : 1 - back;
+      var q = along(pts, k); glow(q[0], q[1], 16, SYS[o.si].col, .95); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(q[0], q[1], 3.2, 0, 6.2832); ctx.fill();
+    });
+    OLAY = OLAY.filter(function (o) { return !o.done; });
+    ctx.globalCompositeOperation = 'source-over';
+    tokEl.textContent = (window.T ? window.T('tok') : 'TOPLAM TOKEN') + ' ' + (Math.round(tokTotal / 100) * 100).toLocaleString(window.LANG === 'tr' || !window.LANG ? 'tr-TR' : window.LANG === 'de' ? 'de-DE' : window.LANG === 'es' ? 'es-ES' : 'en-US');
+  }
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still) { nextAt = 0; var tt = 0; for (; tt < 4.2; tt += .05) { if (tt >= nextAt) draw(tt); } draw(4.2); return; }
+  var t0 = null;
+  function loop(ts) { if (t0 === null) t0 = ts; if (!document.hidden) { var t = (ts - t0) / 1000; draw(t); } requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+})();
+
+
+</script>
+</body></html>

@@ -1,0 +1,287 @@
+// OZMIRA arayüzü. Veri yalnızca bu bilgisayardaki sunucudan gelir (/api/*). Tarayıcı dışarıya istek yapmaz; isteğe bağlı paylaşımı yalnızca yerel sunucu yapar.
+// Kullanıcıdan ya da dosyalardan gelen metin her yerde textContent ile yazılır, innerHTML kullanılmaz.
+import { createSahne, fmt, STILLER } from '/sahne.js';
+import { t, tp, dil, dilSec, DILLER, DIL_AD, hataCevir, uygula } from '/i18n.js';
+
+const $ = (id) => document.getElementById(id);
+const TOKEN = document.querySelector('meta[name="ozmira-token"]').content;
+const stilAd = (k) => (STILLER.includes(k) ? t('stil.' + k) : k);
+const ONAYARLAR = [
+  { ad: 'Claude', stil: 'lif', renk: '#ff8a3d' }, { ad: 'ChatGPT', stil: 'galaksi', renk: '#4d8dff' },
+  { ad: 'Gemini', stil: 'sarmal', renk: '#c06bff' }, { ad: 'Grok', stil: 'karadelik', renk: '#5fe0d0' }, { ad: 'Başka', bos: true, stil: 'kure', renk: '#f5b82e' },
+];
+// Örnek sahne: kimseye ait değil, yalnızca ilk açılışta nasıl göründüğünü göstermek için.
+function ornekUret() {
+  const L = (k) => t(k).split('|');
+  return {
+    yok: false, merkez: { ad: 'OZMIRA', renk: '#f5b82e' },
+    sistemler: [
+      { id: 'a', ad: t('o.sistem', { x: 'A' }), stil: 'galaksi', renk: '#4d8dff', ajanlar: L('o.ajanlarA') },
+      { id: 'b', ad: t('o.sistem', { x: 'B' }), stil: 'lif', renk: '#ff8a3d', ajanlar: L('o.ajanlarB') },
+      { id: 'c', ad: t('o.sistem', { x: 'C' }), stil: 'sarmal', renk: '#c06bff', ajanlar: L('o.ajanlarC') },
+    ].map((x) => ({ ...x, ajanlar: x.ajanlar.map((ad) => ({ ad, aciklama: t('o.aciklama'), calisma: 0, token: 0, kosuyor: false })) })),
+  };
+}
+const ORNEK = ornekUret();
+
+function h(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, ''); else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  kids.flat().forEach((c) => { if (c != null) e.append(c.nodeType ? c : document.createTextNode(String(c))); });
+  return e;
+}
+async function api(method, yol, govde) {
+  const r = await fetch(yol, { method, headers: { 'X-Token': TOKEN, ...(govde ? { 'Content-Type': 'application/json' } : {}) }, body: govde ? JSON.stringify(govde) : undefined });
+  let j = null; try { j = await r.json(); } catch (_) { /* gövde yok */ }
+  if (!r.ok) throw new Error((j && j.hata) ? hataCevir(j.hata) : t('err.istek', { n: r.status }));
+  return j;
+}
+function fail(e) {
+  const f = $('fallback'); f.style.display = 'flex'; f.textContent = t('fail.baslik');
+  f.append(h('div', { class: 'fail-msg', text: t('fail.hata', { m: e && e.message ? e.message : e }) }));
+}
+addEventListener('error', (ev) => { if (!sahne) fail(ev.error || ev.message); });
+
+let hesap = { plan: 'ucretsiz', izinli_stiller: ['galaksi', 'kure'], sistem_siniri: 2, ajan_siniri: 7, telemetri: false, toplayici_var: false, satin_al: '', lisans_var: false };
+async function hesapYukle() { try { hesap = await api('GET', '/api/hesap'); } catch (_) { /* eski değer kalır */ } }
+let sahne = null, durum = null, ornekMi = true, demoAcik = true, dockSig = '', poll = 0;
+
+// ---------- Panel bileşenleri ----------
+function hudCiz() {
+  const hud = $('hud'); hud.replaceChildren();
+  durum.sistemler.forEach((s) => {
+    const kos = s.ajanlar.filter((a) => a.kosuyor).length;
+    hud.append(h('div', { class: 'r' + (kos ? ' run' : '') }, h('i', { style: 'background:' + s.renk + ';box-shadow:0 0 8px ' + s.renk }), h('b', { text: s.ad }),
+      h('span', { text: tp('hud.ajan', s.ajanlar.length) }), kos ? h('b', { text: t('hud.calisiyor', { n: kos }) }) : null));
+  });
+  const gizli = durum.plan && durum.plan.gizli_ajan;
+  if (gizli > 0) hud.append(h('div', { class: 'r' }, h('span', { text: t('hud.gizli', { n: gizli }) })));
+}
+function sideCiz(hata) {
+  const side = $('side'); side.replaceChildren();
+  if (hata) { side.append(h('div', { class: 'warn', text: t('side.offline') })); return; }
+  if (ornekMi) { side.append(h('div', { class: 'warn', text: t('side.ornek') }), h('div', { text: t('side.ornekAlt') })); return; }
+  const toplam = durum.sistemler.reduce((t, s) => t + ((s.token && s.token.toplam) || 0), 0);
+  const son = Math.max(0, ...durum.sistemler.map((s) => s.son_etkinlik || 0));
+  const gecen = son ? Math.max(0, Math.round(Date.now() / 1000 - son)) : 0;
+  const x = gecen < 90 ? t('side.sn', { n: gecen }) : gecen < 5400 ? t('side.dk', { n: Math.round(gecen / 60) }) : t('side.sa', { n: Math.round(gecen / 3600) });
+  side.append(h('div', { class: 'ok', text: t('side.canli') }), h('div', { text: t('side.token', { n: fmt(toplam) }) }),
+    h('div', { text: son ? t('side.son', { x }) : t('side.olayYok') }));
+}
+function kartCiz() {
+  const a = sahne && sahne.secili(); const card = $('card');
+  if (!a) { card.hidden = true; return; }
+  card.hidden = false; $('cn').textContent = a.name; $('cs').textContent = a.sys.ad + ' · ' + stilAd(a.sys.stil);
+  $('cd').textContent = a.desc || t('card.aciklamaYok');
+  $('cr').textContent = String(a.runs); $('ct').textContent = fmt(a.tokens); $('ck').textContent = a.running ? t('card.calisiyor') : t('card.bosta');
+}
+function dockCiz() {
+  const sig = JSON.stringify([ornekMi, durum.sistemler.map((s) => [s.id, s.ad, s.renk]), demoAcik, hesap.plan, dil]);
+  if (sig === dockSig) return; dockSig = sig;
+  const dock = $('dock'); dock.replaceChildren();
+  const b = (text, fn, on) => h('button', { type: 'button', class: on ? 'on' : '', text, onclick: fn });
+  dock.append(b(t('dock.hepsi'), () => sahne.focus('hepsi')), b(t('dock.merkez'), () => sahne.focus('merkez')));
+  durum.sistemler.forEach((s) => dock.append(b(s.ad, () => sahne.focus(s.id))));
+  dock.append(h('span', { class: 'sep' }), b(t('dock.demo'), () => { demoAcik = !demoAcik; sahne.demo(demoAcik); dockSig = ''; dockCiz(); }, demoAcik));
+  if (!ornekMi) dock.append(b(t('dock.baglan'), baglanPenceresi));
+  dock.append(b(ornekMi ? t('dock.kur') : t('dock.duzenle'), () => sihirbaz()));
+  dock.append(h('span', { class: 'sep' }), b(hesap.plan === 'pro' ? t('dock.pro') : t('dock.ucretsiz'), hesapPenceresi), b(dil.toUpperCase(), dilPenceresi));
+}
+function hepsiniCiz() { hudCiz(); sideCiz(false); kartCiz(); dockCiz(); }
+
+// ---------- Pencere yardımcıları ----------
+let sonOdak = null;
+function pencereAc(icerik) {
+  sonOdak = document.activeElement; const m = $('modal'), p = $('panel'); p.replaceChildren(...icerik); m.hidden = false;
+  const ilk = p.querySelector('input,select,textarea,button'); if (ilk) ilk.focus();
+}
+function pencereKapat() { $('modal').hidden = true; $('panel').replaceChildren(); if (sonOdak && sonOdak.focus) sonOdak.focus(); }
+addEventListener('keydown', (e) => {
+  const m = $('modal');
+  if (e.key === 'Escape' && !m.hidden) { pencereKapat(); return; }
+  if (e.key === 'Tab' && !m.hidden) { const f = [...$('panel').querySelectorAll('input,select,textarea,button:not([disabled])')]; if (!f.length) return;
+    const ilk = f[0], son = f[f.length - 1]; if (e.shiftKey && document.activeElement === ilk) { e.preventDefault(); son.focus(); } else if (!e.shiftKey && document.activeElement === son) { e.preventDefault(); ilk.focus(); } }
+});
+$('modal').addEventListener('pointerdown', (e) => { if (e.target === $('modal')) pencereKapat(); });
+$('cardx').addEventListener('click', () => { sahne.temizleSecim(); kartCiz(); });
+async function kopyala(metin, dugme) {
+  try { await navigator.clipboard.writeText(metin); dugme.textContent = t('c.kopyalandi'); setTimeout(() => { dugme.textContent = t('c.kopyala'); }, 1400); }
+  catch (_) { const r = document.createRange(); r.selectNodeContents(dugme.previousSibling); const s = getSelection(); s.removeAllRanges(); s.addRange(r); dugme.textContent = t('c.secildi'); }
+}
+
+// ---------- Bağlan: olay bildirme ----------
+function baglanPenceresi() {
+  const s = durum.sistemler[0]; const ajan = (s.ajanlar[0] && s.ajanlar[0].ad) || 'ajan-adi';
+  const komut = (x) => h('div', { class: 'code' }, h('span', { text: x }), h('button', { class: 'btn small', type: 'button', text: t('c.kopyala'), onclick: (ev) => kopyala(x, ev.currentTarget) }));
+  const py = /win/i.test(navigator.platform || '') ? 'py' : 'python3';
+  const cli = (o, extra = '') => py + ' ozmira.py olay ' + s.id + ' "' + ajan + '" ' + o + extra;
+  const curl = "curl -s -X POST " + location.origin + "/api/olay -H 'X-Token: " + TOKEN + "' -H 'Content-Type: application/json' -d '{\"sistem\":\"" + s.id + "\",\"ajan\":\"" + ajan + "\",\"olay\":\"bitti\",\"token\":1200}'";
+  pencereAc([
+    h('h1', { text: t('b.baslik') }),
+    h('p', { class: 'lead', text: t('b.lead') }),
+    h('h3', { text: t('b.h1') }),
+    komut(cli('basla')), komut(cli('bitti', ' 1200')),
+    h('p', { class: 'hint', text: t('b.hint1', { ids: durum.sistemler.map((x) => x.id).join(', ') }) }),
+    h('h3', { text: t('b.h2') }),
+    komut(curl),
+    h('p', { class: 'hint', text: t('b.hint2') }),
+    h('div', { class: 'foot' }, h('span'), h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
+  ]);
+}
+
+// ---------- Kurulum sihirbazı ----------
+function sihirbaz() {
+  api('GET', '/api/profil').then((p) => { baslat(p && !p.yok ? p : null); }).catch(() => baslat(null));
+  function baslat(mevcut) {
+    const taslak = mevcut
+      ? { merkez: { ...mevcut.merkez }, sistemler: mevcut.sistemler.map((s) => ({ id: s.id, ad: s.ad, stil: s.stil, renk: s.renk, klasor: (s.ajan_klasorleri || []).join('\n'), ajanlar: (s.ajanlar || []).join('\n') })) }
+      : { merkez: { ad: 'OZMIRA', renk: '#f5b82e' }, sistemler: [] };
+    let adim = 0, hata = '', oneri = [];
+    api('GET', '/api/oneri').then((o) => { oneri = o.klasorler || []; if (adim === 1) ciz(); }).catch(() => {});
+    const adimlar = () => h('div', { class: 'steps' }, [0, 1, 2].map((i) => h('i', { class: i <= adim ? 'on' : '' })));
+    const etiket = (metin, ...k) => h('label', { class: 'f' }, metin, ...k);
+    function bagla(inp, nesne, alan) { inp.addEventListener('input', () => { nesne[alan] = inp.value; }); return inp; }
+
+    function adimMerkez() {
+      return [h('h1', { text: mevcut ? t('w.merkezDuzenle') : t('w.hosgeldin') }),
+        h('p', { class: 'lead', text: t('w.lead0') }),
+        h('div', { class: 'row' },
+          etiket(t('w.merkezAd'), Object.assign(bagla(h('input', { type: 'text', maxlength: '24', value: taslak.merkez.ad, 'aria-label': t('w.merkezAd') }), taslak.merkez, 'ad'), { className: 'grow' })),
+          etiket(t('w.renk'), bagla(h('input', { type: 'color', value: taslak.merkez.renk, 'aria-label': t('w.merkezRenk') }), taslak.merkez, 'renk')))];
+    }
+    function sistemBlok(s, i) {
+      const bul = oneri.length && /claude/i.test(s.ad) ? h('div', { class: 'found' }, t('w.bulundu', { n: oneri[0].adet }),
+        h('button', { class: 'btn small', type: 'button', text: t('c.ekle'), onclick: () => { if (!s.klasor.split('\n').includes(oneri[0].yol)) s.klasor = (s.klasor ? s.klasor + '\n' : '') + oneri[0].yol; ciz(); } })) : null;
+      const sel = h('select', { 'aria-label': t('w.stilAria') }, STILLER.map((k) => { const ok = hesap.izinli_stiller.includes(k); return h('option', { value: k, text: stilAd(k) + (ok ? '' : ' (Pro)'), selected: k === s.stil, disabled: !ok && k !== s.stil }); }));
+      sel.addEventListener('change', () => { s.stil = sel.value; });
+      return h('div', { class: 'sys' },
+        h('header', {}, h('span', { text: t('w.sistemN', { n: i + 1 }) }), h('button', { class: 'btn small', type: 'button', text: t('c.kaldir'), onclick: () => { taslak.sistemler.splice(i, 1); ciz(); } })),
+        h('div', { class: 'row' }, etiket(t('w.ad'), Object.assign(bagla(h('input', { type: 'text', maxlength: '24', value: s.ad, 'aria-label': t('w.sistemAdAria') }), s, 'ad'), { className: '' })), etiket(t('w.stil'), sel), etiket(t('w.renk'), bagla(h('input', { type: 'color', value: s.renk, 'aria-label': t('w.sistemRenkAria') }), s, 'renk'))),
+        etiket(t('w.klasorler'), bagla(h('textarea', { rows: '2', placeholder: t('w.klasorPh'), text: s.klasor }), s, 'klasor')), bul,
+        etiket(t('w.elle'), bagla(h('textarea', { rows: '2', placeholder: t('w.ellePh'), text: s.ajanlar }), s, 'ajanlar')));
+    }
+    function adimSistemler() {
+      return [h('h1', { text: t('w.sistemlerin') }), h('p', { class: 'lead', text: t('w.lead1') }),
+        hesap.plan === 'pro' ? null : h('p', { class: 'hint', text: t('w.freeHint', { s: hesap.sistem_siniri, a: hesap.ajan_siniri }) }),
+        h('div', { class: 'chips' }, ONAYARLAR.map((o) => h('button', { class: 'chip', type: 'button', text: '+ ' + (o.bos ? t('w.baska') : o.ad), disabled: taslak.sistemler.length >= hesap.sistem_siniri,
+          onclick: () => { taslak.sistemler.push({ ad: o.bos ? '' : o.ad, stil: hesap.izinli_stiller.includes(o.stil) ? o.stil : hesap.izinli_stiller[0], renk: o.renk, klasor: '', ajanlar: '' }); ciz(); } }))),
+        taslak.sistemler.length ? taslak.sistemler.map(sistemBlok) : h('p', { class: 'hint', text: t('w.ilkSec') })].flat().filter((x) => x != null);
+    }
+    function adimOzet() {
+      return [h('h1', { text: t('w.hazir') }), h('p', { class: 'lead', text: t('w.lead2') }),
+        h('div', { class: 'sys' }, h('header', {}, h('span', { text: taslak.merkez.ad || 'OZMIRA' }), h('span', { text: tp('w.sistemSayi', taslak.sistemler.length) })),
+          taslak.sistemler.map((s) => h('div', { class: 'code' }, h('span', { text: (s.ad || t('w.adsiz')) + ' · ' + stilAd(s.stil) }), h('i', { style: 'width:14px;height:14px;border-radius:50%;background:' + s.renk })))),
+        h('p', { class: 'hint', text: t('w.sonraki') })];
+    }
+    function dogrula() {
+      if (adim === 0 && !taslak.merkez.ad.trim()) return t('w.vMerkez');
+      if (adim === 1) { if (!taslak.sistemler.length) return t('w.vEn1'); if (taslak.sistemler.some((s) => !s.ad.trim())) return t('w.vAd'); }
+      return '';
+    }
+    function profile() {
+      return { merkez: { ad: taslak.merkez.ad.trim(), renk: taslak.merkez.renk }, sistemler: taslak.sistemler.map((s) => ({ ...(s.id ? { id: s.id } : {}), ad: s.ad.trim(), stil: s.stil, renk: s.renk,
+        ajan_klasorleri: s.klasor.split('\n').map((x) => x.trim()).filter(Boolean), ajanlar: s.ajanlar.split(/[\n,]/).map((x) => x.trim()).filter(Boolean) })) };
+    }
+    async function kaydet(dugme) {
+      dugme.disabled = true; hata = '';
+      try { await api('PUT', '/api/profil', profile()); pencereKapat(); await yukle(true); }
+      catch (e) { hata = e.message; dugme.disabled = false; ciz(); }
+    }
+    function ciz() {
+      const govde = [adimMerkez, adimSistemler, adimOzet][adim]();
+      const ileri = h('button', { class: 'btn main', type: 'button', text: adim === 2 ? t('c.kaydet') : t('c.devam'), onclick: (ev) => { hata = dogrula(); if (hata) return ciz(); if (adim === 2) return kaydet(ev.currentTarget); adim++; hata = ''; ciz(); } });
+      pencereAc([adimlar(), ...govde.flat(), h('div', { class: 'err', role: 'alert', text: hata }),
+        h('div', { class: 'foot' }, adim === 0 ? h('button', { class: 'btn', type: 'button', text: ornekMi ? t('w.onceOrnek') : t('c.vazgec'), onclick: pencereKapat }) : h('button', { class: 'btn', type: 'button', text: t('c.geri'), onclick: () => { adim--; hata = ''; ciz(); } }), ileri)]);
+    }
+    ciz();
+  }
+}
+
+
+// ---------- Hesap: plan, lisans, paylaşım ----------
+function hesapPenceresi() {
+  let hata = '', bilgi = '';
+  const lisansGiris = h('input', { type: 'text', placeholder: 'OZMIRA1....', autocomplete: 'off', spellcheck: 'false', 'aria-label': t('a.lisansAria') });
+  const izin = h('input', { type: 'checkbox', id: 'izin', checked: hesap.telemetri });
+  function ciz() {
+    const pro = hesap.plan === 'pro';
+    const sv = { s: hesap.sistem_siniri, a: hesap.ajan_siniri };
+    pencereAc([
+      h('h1', { text: pro ? t('a.pro') : t('a.ucretsizSurum') }),
+      h('p', { class: 'lead', text: pro ? t('a.leadPro', sv) : t('a.leadFree', sv) }),
+      pro ? null : h('div', { class: 'found' }, hesap.satin_al ? [h('span', { text: t('a.compra') }), h('a', { href: hesap.satin_al, target: '_blank', rel: 'noopener noreferrer', text: hesap.satin_al })] : h('span', { text: t('a.compraYok') })),
+      h('h3', { text: t('a.lisansBaslik') }),
+      h('div', { class: 'row' }, h('div', { class: 'grow' }, lisansGiris),
+        h('button', { class: 'btn main', type: 'button', text: t('a.etkinlestir'), onclick: async (ev) => {
+          const v = lisansGiris.value.trim(); if (!v) { hata = t('a.yapistir'); return ciz(); }
+          const dugme = ev.currentTarget; dugme.disabled = true;
+          try { hesap = await api('PUT', '/api/hesap', { lisans: v }); bilgi = t('a.proAcildi'); hata = ''; dockSig = ''; dockCiz(); }
+          catch (e) { hata = e.message; bilgi = ''; dugme.disabled = false; }
+          ciz();
+        } })),
+      pro ? h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', text: t('a.kaldirBtn'), onclick: async () => { try { hesap = await api('PUT', '/api/hesap', { lisans: '' }); dockSig = ''; dockCiz(); bilgi = t('a.kaldirildi'); hata = ''; } catch (e) { hata = e.message; } ciz(); } })) : null,
+      h('h3', { text: t('a.paylasim') }),
+      h('label', { class: 'f', for: 'izin' }, h('span', {}, izin, ' ' + t('a.izin'))),
+      h('p', { class: 'hint', text: t('a.izinHint') + (hesap.toplayici_var ? '' : t('a.izinYok')) }),
+      h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', text: t('a.izinKaydet'), onclick: async () => { try { hesap = await api('PUT', '/api/hesap', { telemetri: izin.checked }); bilgi = t('a.tercihKayit'); hata = ''; } catch (e) { hata = e.message; } ciz(); } })),
+      h('p', { class: 'hint', text: t('a.veri', { p: hesap.veri_klasoru || '~/.ozmira', v: hesap.surum }) }),
+      h('div', { class: 'err', role: 'alert', text: hata }), bilgi ? h('div', { class: 'found', role: 'status', text: bilgi }) : null,
+      h('div', { class: 'foot' }, h('button', { class: 'btn', type: 'button', text: t('a.geriBildirim'), onclick: geriBildirimPenceresi }), h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
+    ].filter(Boolean));
+  }
+  ciz();
+}
+function geriBildirimPenceresi() {
+  let tur = 'oneri';
+  const metin = h('textarea', { rows: '5', maxlength: '1000', placeholder: t('g.ph'), 'aria-label': t('g.baslik') });
+  const sel = h('select', { 'aria-label': t('g.tur') }, [['oneri', t('g.oneri')], ['hata', t('g.hata')], ['begeni', t('g.begeni')]].map(([v, ad]) => h('option', { value: v, text: ad })));
+  sel.addEventListener('change', () => { tur = sel.value; });
+  pencereAc([
+    h('h1', { text: t('g.baslik') }),
+    h('p', { class: 'lead', text: t('g.lead') }),
+    h('label', { class: 'f' }, t('g.tur'), sel), h('label', { class: 'f' }, t('g.mesaj'), metin),
+    h('div', { class: 'err', role: 'alert', id: 'gbhata' }), h('div', { class: 'found', role: 'status', id: 'gbsonuc' }),
+    h('div', { class: 'foot' }, h('button', { class: 'btn', type: 'button', text: t('c.vazgec'), onclick: pencereKapat }),
+      h('button', { class: 'btn main', type: 'button', text: t('c.gonder'), onclick: async (ev) => {
+        const b = ev.currentTarget; b.disabled = true; $('gbhata').textContent = '';
+        try { const r = await api('POST', '/api/geri-bildirim', { tur, metin: metin.value }); $('gbsonuc').textContent = r.paylasildi ? t('g.gonderildi') : t('g.kaydedildi'); metin.value = ''; }
+        catch (e) { $('gbhata').textContent = e.message; b.disabled = false; }
+      } })),
+  ]);
+}
+function dilPenceresi() {
+  pencereAc([
+    h('h1', { text: t('l.baslik') }), h('p', { class: 'lead', text: t('l.lead') }),
+    h('div', { class: 'chips', role: 'group', 'aria-label': t('dock.dilAria') }, DILLER.map((k) => h('button', { class: 'chip' + (k === dil ? ' on' : ''), type: 'button', lang: k, 'aria-pressed': k === dil ? 'true' : 'false', text: DIL_AD[k],
+      onclick: () => { if (k !== dil) { dilSec(k); location.reload(); } else pencereKapat(); } }))),
+    h('div', { class: 'foot' }, h('span'), h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
+  ]);
+}
+
+// ---------- Veri döngüsü ----------
+async function yukle(zorla) {
+  let d;
+  try { d = await api('GET', '/api/durum'); } catch (_) { if (durum) sideCiz(true); return; }
+  if (d.yok) {
+    if (!ornekMi || !durum || zorla) { ornekMi = true; durum = ORNEK; demoAcik = true; sahne.setDurum(durum); sahne.demo(true); dockSig = ''; hepsiniCiz(); }
+    return;
+  }
+  const ilkGercek = ornekMi || zorla; ornekMi = false; durum = d; sahne.setDurum(d);
+  if (ilkGercek) { demoAcik = false; sahne.demo(false); dockSig = ''; }
+  hepsiniCiz();
+}
+
+async function boot() {
+  uygula();
+  await hesapYukle();
+  sahne = createSahne($('stage'));
+  sahne.onSelect(kartCiz);
+  durum = ORNEK; sahne.setDurum(ORNEK); sahne.demo(true); hepsiniCiz();
+  await yukle(false);
+  if (ornekMi) sihirbaz();
+  poll = setInterval(() => { if (!document.hidden && $('modal').hidden) yukle(false); }, 2000);
+}
+boot().catch(fail);

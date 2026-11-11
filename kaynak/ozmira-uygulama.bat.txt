@@ -1,0 +1,19 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+set PY=
+where pythonw >nul 2>nul && set PY=pythonw
+if not defined PY where pyw >nul 2>nul && set PY=pyw
+if defined PY (
+  start "" %PY% "%~dp0ozmira.py" --uygulama
+  exit /b 0
+)
+where py >nul 2>nul && set PY=py
+if not defined PY where python >nul 2>nul && set PY=python
+if not defined PY (
+  echo Python / Python / Python / Python: https://www.python.org/downloads/
+  pause
+  exit /b 1
+)
+%PY% ozmira.py --uygulama
+if errorlevel 1 pause

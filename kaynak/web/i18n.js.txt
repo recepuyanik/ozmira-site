@@ -1,0 +1,247 @@
+// OZMIRA dilleri: Türkçe (tr), İngilizce (en), Almanca (de), İspanyolca (es). Dizinin sırası: [tr, en, de, es].
+// Metinler yalnızca textContent ile yazılır; burada HTML yoktur.
+export const DILLER = ['tr', 'en', 'de', 'es'];
+export const DIL_AD = { tr: 'Türkçe', en: 'English', de: 'Deutsch', es: 'Español' };
+
+const S = {
+  // dock
+  'dock.hepsi': ['Hepsi', 'All', 'Alle', 'Todos'],
+  'dock.merkez': ['Merkez', 'Center', 'Zentrum', 'Centro'],
+  'dock.demo': ['Demo', 'Demo', 'Demo', 'Demo'],
+  'dock.baglan': ['Bağlan', 'Connect', 'Verbinden', 'Conectar'],
+  'dock.kur': ['Kur', 'Set up', 'Einrichten', 'Configurar'],
+  'dock.duzenle': ['Düzenle', 'Edit', 'Bearbeiten', 'Editar'],
+  'dock.ucretsiz': ['Ücretsiz', 'Free', 'Kostenlos', 'Gratis'],
+  'dock.pro': ['Pro', 'Pro', 'Pro', 'Pro'],
+  'dock.dilAria': ['Dil seç', 'Choose language', 'Sprache wählen', 'Elegir idioma'],
+  // hud + yan panel
+  'hud.ajan': ['{n} ajan', '{n} agents', '{n} Agenten', '{n} agentes'],
+  'hud.ajan1': ['{n} ajan', '{n} agent', '{n} Agent', '{n} agente'],
+  'hud.calisiyor': ['{n} çalışıyor', '{n} running', '{n} aktiv', '{n} en ejecución'],
+  'hud.gizli': ["+{n} ajan Ücretsiz sınırının dışında (Pro'da görünür)", '+{n} agents beyond the Free limit (visible in Pro)', '+{n} Agenten außerhalb des kostenlosen Limits (in Pro sichtbar)', '+{n} agentes fuera del límite gratuito (visibles en Pro)'],
+  'side.offline': ['Sunucuya ulaşılamıyor', 'Server unreachable', 'Server nicht erreichbar', 'Servidor no disponible'],
+  'side.ornek': ['Örnek sahne', 'Sample scene', 'Beispielszene', 'Escena de ejemplo'],
+  'side.ornekAlt': ['Kendi sistemlerini eklemek için Kur', 'Click Set up to add your own systems', 'Zum Hinzufügen eigener Systeme auf Einrichten klicken', 'Pulsa Configurar para añadir tus propios sistemas'],
+  'side.canli': ['Yerel · canlı', 'Local · live', 'Lokal · live', 'Local · en vivo'],
+  'side.token': ['Toplam token {n}', 'Total tokens {n}', 'Tokens gesamt {n}', 'Tokens totales {n}'],
+  'side.son': ['Son olay {x} önce', 'Last event {x} ago', 'Letztes Ereignis vor {x}', 'Último evento hace {x}'],
+  'side.sn': ['{n} sn', '{n} s', '{n} s', '{n} s'],
+  'side.dk': ['{n} dk', '{n} min', '{n} Min.', '{n} min'],
+  'side.sa': ['{n} sa', '{n} h', '{n} Std.', '{n} h'],
+  'side.olayYok': ['Henüz olay yok', 'No events yet', 'Noch keine Ereignisse', 'Aún no hay eventos'],
+  // ajan kartı
+  'card.aciklamaYok': ['Açıklama yok. Ajan dosyasının başına description satırı eklersen burada görünür.', 'No description. Add a description line at the top of the agent file and it will appear here.', 'Keine Beschreibung. Füge am Anfang der Agentendatei eine description-Zeile hinzu, dann erscheint sie hier.', 'Sin descripción. Si añades una línea description al inicio del archivo del agente, aparecerá aquí.'],
+  'card.calisiyor': ['Çalışıyor', 'Running', 'Aktiv', 'En ejecución'],
+  'card.bosta': ['Boşta', 'Idle', 'Inaktiv', 'Inactivo'],
+  'card.calisma': ['Çalışma', 'Runs', 'Läufe', 'Ejecuciones'],
+  'card.token': ['Token', 'Tokens', 'Tokens', 'Tokens'],
+  'card.durum': ['Durum', 'Status', 'Status', 'Estado'],
+  'card.kapat': ['Kartı kapat', 'Close card', 'Karte schließen', 'Cerrar tarjeta'],
+  // stiller
+  'stil.galaksi': ['Galaksi', 'Galaxy', 'Galaxie', 'Galaxia'],
+  'stil.lif': ['Lif (hologram)', 'Fiber (hologram)', 'Faser (Hologramm)', 'Fibra (holograma)'],
+  'stil.sarmal': ['Çift sarmal', 'Double helix', 'Doppelhelix', 'Doble hélice'],
+  'stil.karadelik': ['Kara delik', 'Black hole', 'Schwarzes Loch', 'Agujero negro'],
+  'stil.kure': ['Küre', 'Sphere', 'Kugel', 'Esfera'],
+  // hata sayfası
+  'fail.kisa': ['3B sahne başlatılamadı.', 'The 3D scene could not start.', 'Die 3D-Szene konnte nicht gestartet werden.', 'No se pudo iniciar la escena 3D.'],
+  'fail.baslik': ['3B sahne başlatılamadı. WebGL açık bir tarayıcı gerekir.', 'The 3D scene could not start. A browser with WebGL enabled is required.', 'Die 3D-Szene konnte nicht gestartet werden. Ein Browser mit aktiviertem WebGL ist erforderlich.', 'No se pudo iniciar la escena 3D. Se necesita un navegador con WebGL activado.'],
+  'fail.hata': ['Hata: {m}', 'Error: {m}', 'Fehler: {m}', 'Error: {m}'],
+  'err.istek': ['İstek başarısız ({n}).', 'Request failed ({n}).', 'Anfrage fehlgeschlagen ({n}).', 'La solicitud falló ({n}).'],
+  // ortak düğmeler
+  'c.kopyala': ['Kopyala', 'Copy', 'Kopieren', 'Copiar'],
+  'c.kopyalandi': ['Kopyalandı', 'Copied', 'Kopiert', 'Copiado'],
+  'c.secildi': ['Seçildi, Ctrl+C', 'Selected, Ctrl+C', 'Markiert, Strg+C', 'Seleccionado, Ctrl+C'],
+  'c.kapat': ['Kapat', 'Close', 'Schließen', 'Cerrar'],
+  'c.vazgec': ['Vazgeç', 'Cancel', 'Abbrechen', 'Cancelar'],
+  'c.gonder': ['Gönder', 'Send', 'Senden', 'Enviar'],
+  'c.kaydet': ['Kaydet', 'Save', 'Speichern', 'Guardar'],
+  'c.devam': ['Devam', 'Continue', 'Weiter', 'Continuar'],
+  'c.geri': ['Geri', 'Back', 'Zurück', 'Atrás'],
+  'c.ekle': ['Ekle', 'Add', 'Hinzufügen', 'Añadir'],
+  'c.kaldir': ['Kaldır', 'Remove', 'Entfernen', 'Quitar'],
+  // Bağlan
+  'b.baslik': ['Sistemlerini bağla', 'Connect your systems', 'Verbinde deine Systeme', 'Conecta tus sistemas'],
+  'b.lead': ['OZMIRA bir ajan çalışmaya başladığında ve bittiğinde haber almak ister. Yalnızca ajan adı, sistem, token sayısı ve istersen kısa bir iş etiketi gönderilir; içerik, prompt ya da kod gönderilmez.',
+    'OZMIRA wants to know when an agent starts and finishes working. Only the agent name, system, token count and, if you like, a short task label are sent; no content, prompts or code.',
+    'OZMIRA möchte wissen, wann ein Agent mit der Arbeit beginnt und wann er fertig ist. Gesendet werden nur Agentenname, System, Token-Anzahl und optional eine kurze Aufgabenbezeichnung; keine Inhalte, Prompts oder Code.',
+    'OZMIRA quiere saber cuándo un agente empieza y termina de trabajar. Solo se envía el nombre del agente, el sistema, el número de tokens y, si quieres, una etiqueta corta de la tarea; no se envía contenido, prompts ni código.'],
+  'b.h1': ['1 · Komut satırı (ozmira klasöründe)', '1 · Command line (in the ozmira folder)', '1 · Befehlszeile (im ozmira-Ordner)', '1 · Línea de comandos (en la carpeta ozmira)'],
+  'b.hint1': ['Sondaki sayı harcanan token\'dır, isteğe bağlıdır. Sonuna "iş etiketi" yazabilirsin. Sistem kimliği: {ids}.',
+    'The trailing number is the tokens spent; it is optional. You can add a "task label" at the end. System IDs: {ids}.',
+    'Die Zahl am Ende sind die verbrauchten Tokens, sie ist optional. Am Ende kannst du eine „Aufgabenbezeichnung“ anhängen. System-IDs: {ids}.',
+    'El número final son los tokens gastados; es opcional. Al final puedes añadir una «etiqueta de tarea». ID de sistema: {ids}.'],
+  'b.h2': ['2 · HTTP (kendi betiklerinden)', '2 · HTTP (from your own scripts)', '2 · HTTP (aus deinen eigenen Skripten)', '2 · HTTP (desde tus propios scripts)'],
+  'b.hint2': ['Anahtar yalnızca bu bilgisayarda durur (~/.ozmira/.token). Kimseyle paylaşma.', 'The key stays on this computer only (~/.ozmira/.token). Do not share it with anyone.', 'Der Schlüssel bleibt nur auf diesem Computer (~/.ozmira/.token). Teile ihn mit niemandem.', 'La clave solo se guarda en este equipo (~/.ozmira/.token). No la compartas con nadie.'],
+  // sihirbaz
+  'w.hosgeldin': ["OZMIRA'ya hoş geldin", 'Welcome to OZMIRA', 'Willkommen bei OZMIRA', 'Te damos la bienvenida a OZMIRA'],
+  'w.merkezDuzenle': ['Merkezi düzenle', 'Edit the center', 'Zentrum bearbeiten', 'Editar el centro'],
+  'w.lead0': ['Burada kendi yapay zekâ sistemlerini bir araya getirirsin. Tanımların, olayların ve anahtarın yalnızca bu bilgisayarda (~/.ozmira) durur. Hesap yok, bulut yok; varsayılan olarak kimseyle paylaşılan bir şey yok.',
+    'Here you bring your own AI systems together. Your definitions, events and key stay only on this computer (~/.ozmira). No account, no cloud; by default nothing is shared with anyone.',
+    'Hier führst du deine eigenen KI-Systeme zusammen. Deine Definitionen, Ereignisse und dein Schlüssel bleiben nur auf diesem Computer (~/.ozmira). Kein Konto, keine Cloud; standardmäßig wird nichts mit anderen geteilt.',
+    'Aquí reúnes tus propios sistemas de IA. Tus definiciones, eventos y clave se guardan solo en este equipo (~/.ozmira). Sin cuenta ni nube; por defecto no se comparte nada con nadie.'],
+  'w.merkezAd': ['Merkezin adı', 'Name of the center', 'Name des Zentrums', 'Nombre del centro'],
+  'w.renk': ['Renk', 'Color', 'Farbe', 'Color'],
+  'w.merkezRenk': ['Merkez rengi', 'Center color', 'Farbe des Zentrums', 'Color del centro'],
+  'w.bulundu': ['~/.claude/agents içinde {n} ajan dosyası bulundu.', 'Found {n} agent files in ~/.claude/agents.', '{n} Agentendateien in ~/.claude/agents gefunden.', 'Se encontraron {n} archivos de agente en ~/.claude/agents.'],
+  'w.stilAria': ['Görsel stil', 'Visual style', 'Visueller Stil', 'Estilo visual'],
+  'w.stil': ['Stil', 'Style', 'Stil', 'Estilo'],
+  'w.sistemAdAria': ['Sistem adı', 'System name', 'Systemname', 'Nombre del sistema'],
+  'w.sistemRenkAria': ['Sistem rengi', 'System color', 'Systemfarbe', 'Color del sistema'],
+  'w.ad': ['Ad', 'Name', 'Name', 'Nombre'],
+  'w.sistemN': ['Sistem {n}', 'System {n}', 'System {n}', 'Sistema {n}'],
+  'w.klasorler': ['Ajan klasörleri (her satıra bir yol, .md dosyalarından okunur)', 'Agent folders (one path per line, read from .md files)', 'Agentenordner (ein Pfad pro Zeile, gelesen aus .md-Dateien)', 'Carpetas de agentes (una ruta por línea, se leen de archivos .md)'],
+  'w.klasorPh': ['~/projem/ajanlar', '~/my-project/agents', '~/mein-projekt/agenten', '~/mi-proyecto/agentes'],
+  'w.elle': ['Elle ajan adları (satır ya da virgülle ayır)', 'Agent names by hand (separate with lines or commas)', 'Agentennamen von Hand (durch Zeilen oder Kommas trennen)', 'Nombres de agentes a mano (separa con saltos de línea o comas)'],
+  'w.ellePh': ['Araştırmacı, Yazar', 'Researcher, Writer', 'Rechercheur, Autor', 'Investigador, Redactor'],
+  'w.sistemlerin': ['Sistemlerin', 'Your systems', 'Deine Systeme', 'Tus sistemas'],
+  'w.lead1': ['Her sistem sahnede kendi renginde ve biçiminde görünür. Ajanlarını klasörden okutabilir ya da adlarını elle yazabilirsin; sonradan da değiştirebilirsin.',
+    'Each system appears in the scene in its own color and shape. You can read your agents from a folder or type their names by hand; you can change this later.',
+    'Jedes System erscheint in der Szene in eigener Farbe und Form. Du kannst deine Agenten aus einem Ordner einlesen oder ihre Namen von Hand eintippen; später lässt sich beides ändern.',
+    'Cada sistema aparece en la escena con su propio color y forma. Puedes leer tus agentes desde una carpeta o escribir sus nombres a mano; podrás cambiarlo después.'],
+  'w.freeHint': ["Ücretsiz sürüm: en fazla {s} yapay zekâ sistemi, toplam {a} ajan ve Galaksi ile Küre stilleri. Pro'da sistem ve ajan sınırı yok, 5 stilin hepsi açılır (alttaki Ücretsiz düğmesi, Hesap).",
+    'Free version: up to {s} AI systems, {a} agents in total, and the Galaxy and Sphere styles. In Pro there is no system or agent limit and all 5 styles unlock (Free button below, Account).',
+    'Kostenlose Version: höchstens {s} KI-Systeme, insgesamt {a} Agenten sowie die Stile Galaxie und Kugel. In Pro gibt es kein System- oder Agentenlimit und alle 5 Stile sind freigeschaltet (Schaltfläche Kostenlos unten, Konto).',
+    'Versión gratuita: hasta {s} sistemas de IA, {a} agentes en total y los estilos Galaxia y Esfera. En Pro no hay límite de sistemas ni de agentes y se desbloquean los 5 estilos (botón Gratis abajo, Cuenta).'],
+  'w.baska': ['Başka', 'Other', 'Andere', 'Otro'],
+  'w.ilkSec': ['Başlamak için yukarıdan bir sistem seç.', 'Pick a system above to get started.', 'Wähle oben ein System, um zu beginnen.', 'Elige un sistema arriba para empezar.'],
+  'w.hazir': ['Hazır mı?', 'Ready?', 'Bereit?', '¿Listo?'],
+  'w.lead2': ['Kaydedince sahne bu sistemlerle yeniden kurulur. Bunu istediğin zaman Düzenle ile değiştirebilirsin.', 'When you save, the scene is rebuilt with these systems. You can change this at any time with Edit.', 'Beim Speichern wird die Szene mit diesen Systemen neu aufgebaut. Du kannst das jederzeit mit Bearbeiten ändern.', 'Al guardar, la escena se reconstruye con estos sistemas. Puedes cambiarlo en cualquier momento con Editar.'],
+  'w.sistemSayi': ['{n} sistem', '{n} systems', '{n} Systeme', '{n} sistemas'],
+  'w.sistemSayi1': ['{n} sistem', '{n} system', '{n} System', '{n} sistema'],
+  'w.adsiz': ['(adsız)', '(unnamed)', '(ohne Namen)', '(sin nombre)'],
+  'w.sonraki': ["Sonraki adım: Bağlan düğmesiyle ajanlarının çalışmaya başlayıp bittiğini OZMIRA'ya bildirirsin.", 'Next step: use the Connect button to tell OZMIRA when your agents start and finish.', 'Nächster Schritt: Mit der Schaltfläche Verbinden meldest du OZMIRA, wann deine Agenten starten und fertig sind.', 'Siguiente paso: con el botón Conectar le avisas a OZMIRA cuándo tus agentes empiezan y terminan.'],
+  'w.vMerkez': ['Merkeze bir ad ver.', 'Give the center a name.', 'Gib dem Zentrum einen Namen.', 'Ponle un nombre al centro.'],
+  'w.vEn1': ['En az bir sistem ekle.', 'Add at least one system.', 'Füge mindestens ein System hinzu.', 'Añade al menos un sistema.'],
+  'w.vAd': ['Her sistemin bir adı olmalı.', 'Every system needs a name.', 'Jedes System braucht einen Namen.', 'Cada sistema necesita un nombre.'],
+  'w.onceOrnek': ['Önce örneğe bak', 'Look at the sample first', 'Erst das Beispiel ansehen', 'Ver primero el ejemplo'],
+  // örnek sahne
+  'o.sistem': ['Sistem {x}', 'System {x}', 'System {x}', 'Sistema {x}'],
+  'o.ajanlarA': ['Araştırmacı|Yazar|Çevirmen|Özetçi|Denetçi|Planlayıcı', 'Researcher|Writer|Translator|Summarizer|Reviewer|Planner', 'Rechercheur|Autor|Übersetzer|Zusammenfasser|Prüfer|Planer', 'Investigador|Redactor|Traductor|Resumidor|Revisor|Planificador'],
+  'o.ajanlarB': ['Kodlayıcı|Gözden geçiren|Test uzmanı|Belgeleyici', 'Coder|Code reviewer|Tester|Documenter', 'Programmierer|Code-Reviewer|Tester|Dokumentierer', 'Programador|Revisor de código|Probador|Documentador'],
+  'o.ajanlarC': ['Analist|Tasarımcı|Görsel', 'Analyst|Designer|Illustrator', 'Analyst|Designer|Illustrator', 'Analista|Diseñador|Ilustrador'],
+  'o.aciklama': ['Örnek ajan. Kendi sistemini eklediğinde burada gerçek ajanların görünür.', 'Sample agent. When you add your own system, your real agents appear here.', 'Beispielagent. Sobald du dein eigenes System hinzufügst, erscheinen hier deine echten Agenten.', 'Agente de ejemplo. Cuando añadas tu propio sistema, aquí aparecerán tus agentes reales.'],
+  // Hesap
+  'a.pro': ['Pro', 'Pro', 'Pro', 'Pro'],
+  'a.ucretsizSurum': ['Ücretsiz sürüm', 'Free version', 'Kostenlose Version', 'Versión gratuita'],
+  'a.leadPro': ['Sistem ve ajan sınırı yok, 5 stilin hepsi açık. Sahne akıcı kalsın diye teknik tavan: {s} sistem, sistem başına {a} ajan. Lisansın bu bilgisayarda çevrimdışı doğrulanır.',
+    'No system or agent limit, all 5 styles unlocked. To keep the scene smooth there is a technical ceiling: {s} systems, {a} agents per system. Your license is verified offline on this computer.',
+    'Kein System- oder Agentenlimit, alle 5 Stile freigeschaltet. Damit die Szene flüssig bleibt, gibt es eine technische Obergrenze: {s} Systeme, {a} Agenten pro System. Deine Lizenz wird offline auf diesem Computer geprüft.',
+    'Sin límite de sistemas ni de agentes, los 5 estilos desbloqueados. Para que la escena fluya, hay un tope técnico: {s} sistemas, {a} agentes por sistema. Tu licencia se verifica sin conexión en este equipo.'],
+  'a.leadFree': ['Ücretsiz: en fazla {s} yapay zekâ sistemi, toplam {a} ajan, Galaksi ve Küre stilleri. Diğer her şey (3B sahne, olay bildirme, token sayacı, yerel çalışma) aynıdır. Pro: sistem ve ajan sınırı yok, 5 stil.',
+    'Free: up to {s} AI systems, {a} agents in total, Galaxy and Sphere styles. Everything else (3D scene, event reporting, token counter, local operation) is the same. Pro: no system or agent limit, 5 styles.',
+    'Kostenlos: höchstens {s} KI-Systeme, insgesamt {a} Agenten, Stile Galaxie und Kugel. Alles andere (3D-Szene, Ereignismeldung, Token-Zähler, lokaler Betrieb) ist gleich. Pro: kein System- oder Agentenlimit, 5 Stile.',
+    'Gratis: hasta {s} sistemas de IA, {a} agentes en total, estilos Galaxia y Esfera. Todo lo demás (escena 3D, aviso de eventos, contador de tokens, funcionamiento local) es igual. Pro: sin límite de sistemas ni de agentes, 5 estilos.'],
+  'a.compra': ['Pro anahtarı almak için: ', 'To get a Pro key: ', 'Einen Pro-Schlüssel erhältst du hier: ', 'Para conseguir una clave Pro: '],
+  'a.compraYok': ['Bu kopyada satın alma bağlantısı yok. Anahtarı sana gönderen kişiden aldıysan aşağıya yapıştır.', 'This copy has no purchase link. If you received a key from the person who sent you this, paste it below.', 'In dieser Kopie gibt es keinen Kauflink. Wenn du einen Schlüssel von der Person erhalten hast, die dir dies geschickt hat, füge ihn unten ein.', 'Esta copia no tiene enlace de compra. Si recibiste una clave de la persona que te envió esto, pégala abajo.'],
+  'a.lisansBaslik': ['Lisans anahtarı', 'License key', 'Lizenzschlüssel', 'Clave de licencia'],
+  'a.etkinlestir': ['Etkinleştir', 'Activate', 'Aktivieren', 'Activar'],
+  'a.yapistir': ['Anahtarı yapıştır.', 'Paste the key.', 'Füge den Schlüssel ein.', 'Pega la clave.'],
+  'a.proAcildi': ['Pro etkinleştirildi.', 'Pro activated.', 'Pro wurde aktiviert.', 'Pro activado.'],
+  'a.kaldirBtn': ['Anahtarı bu bilgisayardan kaldır', 'Remove the key from this computer', 'Schlüssel von diesem Computer entfernen', 'Quitar la clave de este equipo'],
+  'a.kaldirildi': ['Anahtar kaldırıldı.', 'Key removed.', 'Schlüssel entfernt.', 'Clave eliminada.'],
+  'a.paylasim': ['Paylaşım', 'Sharing', 'Teilen', 'Compartir'],
+  'a.izin': ['Ürünü geliştirmen için anonim kullanım özetini paylaşmaya izin ver', 'Allow sharing an anonymous usage summary to help improve the product', 'Das Teilen einer anonymen Nutzungszusammenfassung erlauben, um das Produkt zu verbessern', 'Permitir compartir un resumen de uso anónimo para ayudar a mejorar el producto'],
+  'a.izinHint': ['Varsayılan kapalıdır. Açarsan yalnızca şunlar gider: sürüm, plan, rastgele kurulum kimliği ve sayaçlar (kaç olay alındı, kaç kez profil kaydedildi). Sistem adların, ajan adların, iş etiketlerin, klasör yolların, token miktarın ve IP adresin gönderilmez. ',
+    'Off by default. If you turn it on, only this is sent: version, plan, a random installation ID and counters (how many events were received, how many times the profile was saved). Your system names, agent names, task labels, folder paths, token amounts and IP address are not sent. ',
+    'Standardmäßig aus. Wenn du es einschaltest, wird nur Folgendes gesendet: Version, Plan, eine zufällige Installations-ID und Zähler (wie viele Ereignisse empfangen, wie oft das Profil gespeichert wurde). Deine Systemnamen, Agentennamen, Aufgabenbezeichnungen, Ordnerpfade, Token-Mengen und deine IP-Adresse werden nicht gesendet. ',
+    'Desactivado por defecto. Si lo activas, solo se envía esto: versión, plan, un ID de instalación aleatorio y contadores (cuántos eventos se recibieron, cuántas veces se guardó el perfil). No se envían los nombres de tus sistemas ni de tus agentes, las etiquetas de tarea, las rutas de carpetas, las cantidades de tokens ni tu dirección IP. '],
+  'a.izinYok': ['Bu kopyada bir toplayıcı adresi tanımlı olmadığı için açık olsa bile hiçbir şey gönderilmez.', 'Because this copy has no collector address configured, nothing is sent even when sharing is on.', 'Da in dieser Kopie keine Sammeladresse hinterlegt ist, wird auch bei eingeschaltetem Teilen nichts gesendet.', 'Como esta copia no tiene configurada una dirección de recolección, no se envía nada aunque esté activado.'],
+  'a.izinKaydet': ['Paylaşım tercihini kaydet', 'Save sharing preference', 'Freigabe-Einstellung speichern', 'Guardar preferencia de compartir'],
+  'a.tercihKayit': ['Tercih kaydedildi.', 'Preference saved.', 'Einstellung gespeichert.', 'Preferencia guardada.'],
+  'a.veri': ['Veri klasörün: {p}  ·  Sürüm {v}', 'Your data folder: {p}  ·  Version {v}', 'Dein Datenordner: {p}  ·  Version {v}', 'Tu carpeta de datos: {p}  ·  Versión {v}'],
+  'a.geriBildirim': ['Geri bildirim yaz', 'Write feedback', 'Feedback schreiben', 'Escribir comentarios'],
+  'a.lisansAria': ['Lisans anahtarı', 'License key', 'Lizenzschlüssel', 'Clave de licencia'],
+  // Geri bildirim
+  'g.baslik': ['Geri bildirim', 'Feedback', 'Feedback', 'Comentarios'],
+  'g.lead': ['Yazdıkların bu bilgisayardaki veri klasörüne kaydedilir. Hesap penceresinden paylaşıma izin verdiysen ve bu kopyada bir toplayıcı adresi varsa, yalnızca bu metin ve sürüm/plan bilgisi anonim olarak gönderilir. Kişisel bilgi, anahtar ya da sistem adı yazma.',
+    'What you write is saved in the data folder on this computer. If you allowed sharing in the Account window and this copy has a collector address, only this text and version/plan information are sent anonymously. Do not write personal information, keys or system names.',
+    'Was du schreibst, wird im Datenordner auf diesem Computer gespeichert. Wenn du im Konto-Fenster das Teilen erlaubt hast und diese Kopie eine Sammeladresse hat, werden nur dieser Text sowie Versions- und Planinformationen anonym gesendet. Schreibe keine persönlichen Daten, Schlüssel oder Systemnamen.',
+    'Lo que escribas se guarda en la carpeta de datos de este equipo. Si permitiste compartir en la ventana Cuenta y esta copia tiene una dirección de recolección, solo se envían de forma anónima este texto y la información de versión/plan. No escribas datos personales, claves ni nombres de sistemas.'],
+  'g.ph': ['Ne işine yaradı, ne eksik, ne bozuk?', 'What was useful, what is missing, what is broken?', 'Was war nützlich, was fehlt, was ist kaputt?', '¿Qué te fue útil, qué falta, qué no funciona?'],
+  'g.tur': ['Tür', 'Type', 'Art', 'Tipo'],
+  'g.mesaj': ['Mesajın', 'Your message', 'Deine Nachricht', 'Tu mensaje'],
+  'g.oneri': ['Öneri', 'Suggestion', 'Vorschlag', 'Sugerencia'],
+  'g.hata': ['Hata', 'Bug', 'Fehler', 'Error'],
+  'g.begeni': ['Beğendiğim bir şey', 'Something I like', 'Etwas, das mir gefällt', 'Algo que me gusta'],
+  'g.gonderildi': ['Kaydedildi ve gönderildi. Teşekkürler.', 'Saved and sent. Thank you.', 'Gespeichert und gesendet. Danke.', 'Guardado y enviado. Gracias.'],
+  'g.kaydedildi': ['Bu bilgisayara kaydedildi. Paylaşım kapalı ya da toplayıcı yok, bu yüzden gönderilmedi.', 'Saved on this computer. Not sent, because sharing is off or there is no collector.', 'Auf diesem Computer gespeichert. Nicht gesendet, da das Teilen ausgeschaltet ist oder kein Sammler vorhanden ist.', 'Guardado en este equipo. No se envió porque compartir está desactivado o no hay recolector.'],
+  // Dil penceresi
+  'l.baslik': ['Dil', 'Language', 'Sprache', 'Idioma'],
+  'l.lead': ['Arayüz dilini seç.', 'Choose the interface language.', 'Wähle die Sprache der Oberfläche.', 'Elige el idioma de la interfaz.'],
+  // sunucu hata iletileri (sunucu Türkçe yazar; burada karşılıkları)
+  'e.sistemSay': ['En az 1, en fazla {a} sistem olmalı.', 'Between 1 and {a} systems are required.', 'Es sind 1 bis {a} Systeme erforderlich.', 'Se requieren entre 1 y {a} sistemas.'],
+  'e.ucretsizSistem': ["Ücretsiz sürümde en fazla {a} yapay zekâ sistemi eklenir. Pro'da sınır yok.", 'The free version allows at most {a} AI systems. Pro has no limit.', 'In der kostenlosen Version sind höchstens {a} KI-Systeme möglich. In Pro gibt es kein Limit.', 'La versión gratuita admite como máximo {a} sistemas de IA. En Pro no hay límite.'],
+  'e.stil': ['Geçersiz stil: {a}', 'Invalid style: {a}', 'Ungültiger Stil: {a}', 'Estilo no válido: {a}'],
+  'e.ucretsizStil': ["Ücretsiz sürümde yalnızca Galaksi ve Küre stilleri var. Diğer stiller Pro'da.", 'The free version only has the Galaxy and Sphere styles. The other styles are in Pro.', 'In der kostenlosen Version gibt es nur die Stile Galaxie und Kugel. Die übrigen Stile sind in Pro.', 'La versión gratuita solo incluye los estilos Galaxia y Esfera. Los demás están en Pro.'],
+  'e.renk': ['Renk #rrggbb biçiminde olmalı.', 'Color must be in #rrggbb format.', 'Die Farbe muss im Format #rrggbb sein.', 'El color debe tener el formato #rrggbb.'],
+  'e.ucretsizAjan': ["Ücretsiz sürümde en fazla {a} ajan gösterilir (bu profilde {b} var). Pro'da ajan sınırı yok.", 'The free version shows at most {a} agents (this profile has {b}). Pro has no agent limit.', 'In der kostenlosen Version werden höchstens {a} Agenten angezeigt (dieses Profil hat {b}). In Pro gibt es kein Agentenlimit.', 'La versión gratuita muestra como máximo {a} agentes (este perfil tiene {b}). En Pro no hay límite de agentes.'],
+  'e.lisansYok': ['Bu sürümde lisans doğrulama anahtarı yok. Satın aldığın sürümü kullan.', 'This build has no license verification key. Use the version you purchased.', 'Diese Version enthält keinen Lizenz-Prüfschlüssel. Verwende die Version, die du gekauft hast.', 'Esta versión no incluye la clave de verificación de licencias. Usa la versión que compraste.'],
+  'e.lisansGecersiz': ['Lisans anahtarı geçersiz.', 'The license key is invalid.', 'Der Lizenzschlüssel ist ungültig.', 'La clave de licencia no es válida.'],
+  'e.lisansSure': ['Lisansın süresi dolmuş.', 'The license has expired.', 'Die Lizenz ist abgelaufen.', 'La licencia ha caducado.'],
+  'e.gbTur': ['Geri bildirim türü geçersiz.', 'The feedback type is invalid.', 'Die Feedback-Art ist ungültig.', 'El tipo de comentario no es válido.'],
+  'e.gbBos': ['Bir şeyler yaz.', 'Write something.', 'Schreibe etwas.', 'Escribe algo.'],
+  'e.profilYok': ['Önce profil oluşturun.', 'Create a profile first.', 'Erstelle zuerst ein Profil.', 'Crea primero un perfil.'],
+  'e.json': ['Geçersiz JSON.', 'Invalid JSON.', 'Ungültiges JSON.', 'JSON no válido.'],
+  'e.buyuk': ['Gövde çok büyük.', 'Request body too large.', 'Anfragetext zu groß.', 'El cuerpo de la solicitud es demasiado grande.'],
+  'e.host': ['Geçersiz Host.', 'Invalid Host.', 'Ungültiger Host.', 'Host no válido.'],
+  'e.kaynak': ['Geçersiz kaynak.', 'Invalid origin.', 'Ungültiger Ursprung.', 'Origen no válido.'],
+  'e.yetkisiz': ['Yetkisiz.', 'Unauthorized.', 'Nicht autorisiert.', 'No autorizado.'],
+};
+
+// Sunucunun Türkçe hata iletisini seçili dile çevirir; tanımadığı iletiyi olduğu gibi bırakır.
+const HATALAR = [
+  [/^En az 1, en fazla (\d+) sistem olmalı\.$/, 'e.sistemSay', ['a']],
+  [/^Ücretsiz sürümde en fazla (\d+) yapay zekâ sistemi eklenir/, 'e.ucretsizSistem', ['a']],
+  [/^Her sistemin bir adı olmalı\.$/, 'w.vAd', []],
+  [/^Geçersiz stil: (.*)$/, 'e.stil', ['a']],
+  [/^Ücretsiz sürümde yalnızca Galaksi ve Küre stilleri var/, 'e.ucretsizStil', []],
+  [/^Renk #rrggbb biçiminde olmalı\.$/, 'e.renk', []],
+  [/^Ücretsiz sürümde en fazla (\d+) ajan gösterilir \(bu profilde (\d+) var\)/, 'e.ucretsizAjan', ['a', 'b']],
+  [/^Bu sürümde lisans doğrulama anahtarı yok/, 'e.lisansYok', []],
+  [/^Lisans anahtarı geçersiz\.$/, 'e.lisansGecersiz', []],
+  [/^Lisansın süresi dolmuş\.$/, 'e.lisansSure', []],
+  [/^Geri bildirim türü geçersiz\.$/, 'e.gbTur', []],
+  [/^Bir şeyler yaz\.$/, 'e.gbBos', []],
+  [/^Önce profil oluşturun\.$/, 'e.profilYok', []],
+  [/^Yetkisiz\.$/, 'e.yetkisiz', []],
+  [/^Geçersiz JSON\.$/, 'e.json', []],
+  [/^Gövde çok büyük\.$/, 'e.buyuk', []],
+  [/^Geçersiz Host\.$/, 'e.host', []],
+  [/^Geçersiz kaynak\.$/, 'e.kaynak', []],
+];
+
+function tespit() {
+  try { const s = localStorage.getItem('ozmira-dil'); if (DILLER.includes(s)) return s; } catch (_) { /* depolama kapalı */ }
+  const n = (typeof navigator !== 'undefined' && ((navigator.languages && navigator.languages[0]) || navigator.language)) || 'en';
+  const k = String(n).slice(0, 2).toLowerCase();
+  return DILLER.includes(k) ? k : 'en';
+}
+export let dil = tespit();
+export function dilSec(k) { if (!DILLER.includes(k)) return; try { localStorage.setItem('ozmira-dil', k); } catch (_) { /* yoksay */ } dil = k; }
+
+export function t(key, vars, kod = dil) {
+  const e = S[key]; if (!e) return key;
+  let m = e[DILLER.indexOf(kod)] || e[1] || e[0];
+  if (vars) m = m.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : '{' + k + '}'));
+  return m;
+}
+// Sayıya göre tekil/çoğul: "key1" varsa ve n === 1 ise onu kullanır.
+export function tp(key, n, vars) { return t(S[key + '1'] && n === 1 ? key + '1' : key, { n, ...(vars || {}) }); }
+export function hataCevir(msg) {
+  if (typeof msg !== 'string') return msg;
+  for (const [re, key, adlar] of HATALAR) {
+    const m = re.exec(msg); if (!m) continue;
+    const v = {}; adlar.forEach((ad, i) => { v[ad] = m[i + 1]; });
+    return t(key, v);
+  }
+  return msg;
+}
+// index.html'deki data-i18n (metin), data-i18n-aria (aria-label) alanlarını doldurur.
+export function uygula(kok = document) {
+  document.documentElement.lang = dil;
+  kok.querySelectorAll('[data-i18n]').forEach((e) => { e.textContent = t(e.getAttribute('data-i18n')); });
+  kok.querySelectorAll('[data-i18n-aria]').forEach((e) => { e.setAttribute('aria-label', t(e.getAttribute('data-i18n-aria'))); });
+}
+export const _anahtarlar = () => Object.keys(S);
+export const _veri = S;

@@ -1,0 +1,13 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+set PY=
+where py >nul 2>nul && set PY=py
+if not defined PY where python >nul 2>nul && set PY=python
+if not defined PY (
+  echo Python bulunamadi. https://www.python.org/downloads/ adresinden kurun.
+  pause
+  exit /b 1
+)
+%PY% ozmira.py
+if errorlevel 1 pause

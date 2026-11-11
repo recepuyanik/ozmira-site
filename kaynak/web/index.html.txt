@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="ozmira-token" content="{{TOKEN}}">
+<meta name="ozmira-kaynak" content="{{KAYNAK}}">
+<title>OZMIRA</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="stylesheet" href="/stil.css">
+<script type="importmap" nonce="{{NONCE}}">{{IMPORTMAP}}</script>
+</head>
+<body>
+<div id="stage"></div>
+<div class="vignette"></div>
+<i class="bracket tl"></i><i class="bracket tr"></i><i class="bracket bl"></i><i class="bracket br"></i>
+<div class="hud" id="hud"></div>
+<div class="side" id="side"></div>
+<section class="card" id="card" hidden aria-live="polite">
+  <button class="x" id="cardx" type="button" data-i18n-aria="card.kapat" aria-label="Kartı kapat">&#215;</button>
+  <h2 id="cn"></h2><div class="sub" id="cs"></div><p id="cd"></p>
+  <dl><dt data-i18n="card.calisma">Çalışma</dt><dd id="cr"></dd><dt data-i18n="card.token">Token</dt><dd id="ct"></dd><dt data-i18n="card.durum">Durum</dt><dd id="ck"></dd></dl>
+</section>
+<div class="dock" id="dock"></div>
+<div class="sig" id="sig">OZMIRA</div>
+<div class="modal" id="modal" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
+<div id="fallback" role="alert" data-i18n="fail.kisa">3B sahne başlatılamadı.</div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

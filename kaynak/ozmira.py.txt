@@ -1,0 +1,1043 @@
+#!/usr/bin/env python3
+"""OZMIRA: kendi yapay zeka sistemini 3B gösteren yerel uygulama.
+
+Hesap yok, bulut yok. Kullanıcıya ait her şey (sistem tanımı, olaylar, anahtar)
+bu klasörde değil, ev dizinindeki .ozmira klasöründe durur. Bu klasör paylaşılabilir.
+
+Kullanım:
+  py ozmira.py                          sunucuyu başlatır, tarayıcıda açar
+  py ozmira.py --lan                    aynı ağdaki telefondan erişim (dikkat: README)
+  py ozmira.py vendor                   three.js'i bu klasöre indirir (internetsiz çalışma)
+  py ozmira.py olay <sistem> <ajan> basla|bitti [token] [iş...]
+  py ozmira.py bilgi                    veri klasörünü ve durumu yazar
+  py ozmira.py --uygulama               tarayıcı sekmesi yerine kendi uygulama penceresinde açar
+  py ozmira.py kisayol                  masaüstüne OZMIRA kısayolu koyar (uygulama penceresiyle açar)
+Dil: OZMIRA_DIL=tr|en|de|es (varsayılan: sistem dili). Arayüz dilini uygulamanın içinden de seçebilirsin.
+"""
+import base64
+import hashlib
+import http.server
+import json
+import locale
+import mimetypes
+import os
+import posixpath
+import re
+import secrets
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+import webbrowser
+from pathlib import Path
+
+SURUM = "0.2.0"
+KOK = Path(__file__).resolve().parent
+WEB = KOK / "web"
+EV = Path(os.environ.get("OZMIRA_HOME") or (Path.home() / ".ozmira"))
+THREE_SURUM = "0.170.0"
+CDN_TABAN = "https://cdn.jsdelivr.net/npm/three@%s/" % THREE_SURUM
+PORT0 = int(os.environ.get("OZMIRA_PORT", "8787"))
+
+STILLER = ("galaksi", "lif", "sarmal", "karadelik", "kure")
+UCRETSIZ_SISTEM = 2          # ücretsiz: en fazla 2 yapay zekâ sistemi
+UCRETSIZ_AJAN = 7            # ücretsiz: bütün sistemlerde toplam en fazla 7 ajan
+UCRETSIZ_STILLER = ("galaksi", "kure")
+PRO_SISTEM = 24              # Pro'da ücretli sınır yok; bu yalnızca sahneyi akıcı tutan teknik tavan
+AJAN_TAVAN = 200             # Pro'da sistem başına teknik tavan
+OLAYLAR = ("basla", "bitti")
+RENK_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+ID_RE = re.compile(r"^[a-z0-9-]{1,24}$")
+KONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
+MAX_GOVDE = 256 * 1024
+MAX_OLAY_DOSYA = 5 * 1024 * 1024
+KILIT = threading.Lock()
+
+
+# ---------- dil (komut satırı ve başlık çıktıları; arayüz dili tarayıcıda seçilir) ----------
+DILLER = ("tr", "en", "de", "es")
+
+
+def dil_bul():
+    d = (os.environ.get("OZMIRA_DIL") or "").strip().lower()[:2]
+    if d in DILLER:
+        return d
+    if os.name == "nt":
+        try:
+            import ctypes
+            return {0x1F: "tr", 0x07: "de", 0x0A: "es"}.get(ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0xFF, "en")
+        except Exception:
+            pass
+    for v in ("LC_ALL", "LC_MESSAGES", "LANGUAGE", "LANG"):
+        k = (os.environ.get(v) or "").strip().lower()[:2]
+        if k in DILLER:
+            return k
+    try:
+        k = (locale.getlocale()[0] or "").lower()[:2]
+        if k in DILLER:
+            return k
+    except Exception:
+        pass
+    return "en"
+
+
+DIL = dil_bul()
+_M = {
+    "port_dolu": ("Hata: %d-%d arası portların hepsi dolu. OZMIRA_PORT ile başka bir port seçin.", "Error: all ports %d-%d are in use. Pick another with OZMIRA_PORT.",
+                  "Fehler: Alle Ports %d-%d sind belegt. Wähle mit OZMIRA_PORT einen anderen.", "Error: los puertos %d-%d están ocupados. Elige otro con OZMIRA_PORT."),
+    "b_pc": ("Bilgisayar", "Computer", "Computer", "Equipo"),
+    "b_tel": ("Telefon", "Phone", "Handy", "Teléfono"),
+    "b_tel_ag": ("aynı Wi-Fi", "same Wi-Fi", "gleiches WLAN", "misma Wi-Fi"),
+    "b_uyari": ("UYARI: Ağ modunda aynı ağdaki herkes bu adresle erişebilir. Ortak Wi-Fi'da kullanmayın.", "WARNING: In network mode anyone on the same network can reach this address. Do not use it on shared Wi-Fi.",
+                "WARNUNG: Im Netzwerkmodus kann jeder im selben Netzwerk diese Adresse aufrufen. Nicht in öffentlichen WLANs verwenden.", "AVISO: en modo red, cualquiera en la misma red puede acceder a esta dirección. No lo uses en Wi-Fi compartida."),
+    "b_veri": ("Verilerin", "Your data", "Deine Daten", "Tus datos"),
+    "b_yerel": ("yerel", "local", "lokal", "local"),
+    "b_net": ("internetten (jsdelivr). Çevrimdışı için: py ozmira.py vendor", "from the internet (jsdelivr). For offline use: py ozmira.py vendor", "aus dem Internet (jsdelivr). Für Offline-Betrieb: py ozmira.py vendor", "desde internet (jsdelivr). Para uso sin conexión: py ozmira.py vendor"),
+    "b_plan": ("Plan", "Plan", "Plan", "Plan"),
+    "b_ucretsiz": ("Ücretsiz (%d sistem, %d ajan, 2 stil)", "Free (%d systems, %d agents, 2 styles)", "Kostenlos (%d Systeme, %d Agenten, 2 Stile)", "Gratis (%d sistemas, %d agentes, 2 estilos)"),
+    "b_pay": ("Paylaşım", "Sharing", "Teilen", "Compartir"),
+    "b_pay_ac": ("açık (Hesap penceresinden değiştirilir)", "on (change it in the Account window)", "an (im Konto-Fenster änderbar)", "activado (se cambia en la ventana Cuenta)"),
+    "b_pay_kapali": ("kapalı", "off", "aus", "desactivado"),
+    "b_dur": ("Durdurmak için Ctrl+C", "Press Ctrl+C to stop", "Zum Beenden Strg+C drücken", "Pulsa Ctrl+C para detener"),
+    "b_pencere": ("Pencere kapanınca OZMIRA da durur.", "OZMIRA stops when the window is closed.", "OZMIRA wird beendet, wenn das Fenster geschlossen wird.", "OZMIRA se detiene al cerrar la ventana."),
+    "b_tarayici_yok": ("Chrome, Edge ya da Brave bulunamadı; varsayılan tarayıcıda açılıyor.", "Chrome, Edge or Brave not found; opening in the default browser.",
+                       "Chrome, Edge oder Brave nicht gefunden; Öffnen im Standardbrowser.", "No se encontró Chrome, Edge ni Brave; se abre en el navegador predeterminado."),
+    "kul_olay": ("Kullanım: py ozmira.py olay <sistem> <ajan> basla|bitti [token] [iş...]", "Usage: py ozmira.py olay <system> <agent> basla|bitti [tokens] [task...]",
+                 "Verwendung: py ozmira.py olay <System> <Agent> basla|bitti [Tokens] [Aufgabe...]", "Uso: py ozmira.py olay <sistema> <agente> basla|bitti [tokens] [tarea...]"),
+    "once_kur": ("Önce uygulamayı açıp kurulumu tamamlayın.", "Open the app and finish the setup first.", "Öffne zuerst die App und schließe die Einrichtung ab.", "Abre primero la aplicación y termina la configuración."),
+    "kayit": ("Kaydedildi.", "Saved.", "Gespeichert.", "Guardado."),
+    "hata": ("Hata:", "Error:", "Fehler:", "Error:"),
+    "sistem_idleri": ("(sistem kimlikleri: %s)", "(system IDs: %s)", "(System-IDs: %s)", "(ID de sistema: %s)"),
+    "i_surum": ("Sürüm", "Version", "Version", "Versión"),
+    "i_veri": ("Veri klasörü", "Data folder", "Datenordner", "Carpeta de datos"),
+    "i_plan": ("Plan", "Plan", "Plan", "Plan"),
+    "i_ucretsiz": ("Ücretsiz", "Free", "Kostenlos", "Gratis"),
+    "i_profil": ("Profil", "Profile", "Profil", "Perfil"),
+    "i_profil_var": ("%d sistem: %s", "%d systems: %s", "%d Systeme: %s", "%d sistemas: %s"),
+    "i_profil_yok": ("yok (ilk açılışta sihirbaz çalışır)", "none (the wizard runs on first start)", "keines (der Assistent startet beim ersten Start)", "ninguno (el asistente se ejecuta al primer inicio)"),
+    "i_olay": ("Olay sayısı", "Event count", "Anzahl Ereignisse", "Número de eventos"),
+    "i_internetten": ("internetten", "from the internet", "aus dem Internet", "desde internet"),
+    "k_yok": ("Uygulama penceresi için Chrome, Edge ya da Brave gerekir; bulunamadı.", "An app window needs Chrome, Edge or Brave; none was found.",
+              "Für das App-Fenster wird Chrome, Edge oder Brave benötigt; nichts gefunden.", "La ventana de aplicación necesita Chrome, Edge o Brave; no se encontró ninguno."),
+    "k_tamam": ("Kısayol oluşturuldu: %s", "Shortcut created: %s", "Verknüpfung erstellt: %s", "Acceso directo creado: %s"),
+    "k_hata": ("Kısayol oluşturulamadı: %s", "Could not create the shortcut: %s", "Verknüpfung konnte nicht erstellt werden: %s", "No se pudo crear el acceso directo: %s"),
+}
+
+
+def m(k, *a):
+    s = _M[k][DILLER.index(DIL)]
+    return s % a if a else s
+
+
+# ---------- yardımcılar ----------
+def temiz(s, n):
+    return KONTROL_RE.sub(" ", str(s)).strip()[:n]
+
+
+def slug(s):
+    t = re.sub(r"[^a-z0-9]+", "-", temiz(s, 40).lower().replace("ı", "i").replace("ş", "s").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c")).strip("-")
+    return (t or "sistem")[:20]
+
+
+def ev_hazirla():
+    EV.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(EV, 0o700)
+    except OSError:
+        pass
+
+
+def token_al():
+    ev_hazirla()
+    tp = EV / ".token"
+    if tp.exists():
+        t = tp.read_text(encoding="utf-8").strip()
+        if t:
+            return t
+    t = secrets.token_urlsafe(24)
+    tp.write_text(t, encoding="utf-8")
+    try:
+        os.chmod(tp, 0o600)
+    except OSError:
+        pass
+    return t
+
+
+def json_oku(yol, varsayilan):
+    try:
+        return json.loads(yol.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return varsayilan
+
+
+def json_yaz(yol, obj, gizli=False):
+    ev_hazirla()
+    tmp = yol.with_suffix(yol.suffix + ".tmp")
+    tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+    if gizli:
+        try:
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass
+    if yol.exists():
+        try:
+            shutil.copyfile(yol, yol.with_suffix(yol.suffix + ".bak"))
+        except OSError:
+            pass
+    os.replace(tmp, yol)
+
+
+# ---------- profil ----------
+class PlanSiniri(ValueError):
+    """Ücretsiz planın sınırı aşıldı (HTTP 402)."""
+
+
+def profil_oku():
+    p = EV / "profil.json"
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def profil_dogrula(ham, plan_adi="pro"):
+    if not isinstance(ham, dict):
+        raise ValueError("Profil bir nesne olmalı.")
+    m = ham.get("merkez") if isinstance(ham.get("merkez"), dict) else {}
+    merkez = {"ad": temiz(m.get("ad", "OZMIRA"), 24) or "OZMIRA", "renk": m.get("renk") if RENK_RE.match(str(m.get("renk", ""))) else "#f5b82e"}
+    ss = ham.get("sistemler")
+    en_cok = PRO_SISTEM if plan_adi == "pro" else UCRETSIZ_SISTEM
+    if not isinstance(ss, list) or not 1 <= len(ss) <= PRO_SISTEM:
+        raise ValueError("En az 1, en fazla %d sistem olmalı." % PRO_SISTEM)
+    if len(ss) > en_cok:
+        raise PlanSiniri("Ücretsiz sürümde en fazla %d yapay zekâ sistemi eklenir. Pro'da sınır yok." % UCRETSIZ_SISTEM)
+    out, kullanilan = [], set()
+    for i, s in enumerate(ss):
+        if not isinstance(s, dict):
+            raise ValueError("Sistem bir nesne olmalı.")
+        ad = temiz(s.get("ad", ""), 24)
+        if not ad:
+            raise ValueError("Her sistemin bir adı olmalı.")
+        stil = s.get("stil")
+        if stil not in STILLER:
+            raise ValueError("Geçersiz stil: %s" % temiz(stil, 20))
+        if plan_adi != "pro" and stil not in UCRETSIZ_STILLER:
+            raise PlanSiniri("Ücretsiz sürümde yalnızca Galaksi ve Küre stilleri var. Diğer stiller Pro'da.")
+        renk = s.get("renk")
+        if not RENK_RE.match(str(renk)):
+            raise ValueError("Renk #rrggbb biçiminde olmalı.")
+        sid = s.get("id") if ID_RE.match(str(s.get("id", ""))) else slug(ad)
+        base, k = sid, 2
+        while sid in kullanilan:
+            sid = "%s-%d" % (base[:20], k)
+            k += 1
+        kullanilan.add(sid)
+        kl = [temiz(x, 300) for x in (s.get("ajan_klasorleri") or []) if isinstance(x, str) and temiz(x, 300)][:5]
+        aj, gor = [], set()
+        for x in s.get("ajanlar") or []:
+            if isinstance(x, str):
+                n = temiz(x, 60)
+                if n and n not in gor:
+                    gor.add(n)
+                    aj.append(n)
+        out.append({"id": sid, "ad": ad, "stil": stil, "renk": renk.lower(), "ajan_klasorleri": kl, "ajanlar": aj[:AJAN_TAVAN]})
+    if plan_adi != "pro":
+        toplam = sum(len(ajanlari_tara(x)) for x in out)
+        if toplam > UCRETSIZ_AJAN:
+            raise PlanSiniri("Ücretsiz sürümde en fazla %d ajan gösterilir (bu profilde %d var). Pro'da ajan sınırı yok." % (UCRETSIZ_AJAN, toplam))
+    return {"surum": 1, "merkez": merkez, "sistemler": out}
+
+
+# ---------- ayarlar, lisans, isteğe bağlı paylaşım ----------
+def ayar_oku():
+    a = json_oku(EV / "ayar.json", {})
+    a = a if isinstance(a, dict) else {}
+    out = {"telemetri": bool(a.get("telemetri")), "kurulum_kimligi": str(a.get("kurulum_kimligi", "")), "lisans": str(a.get("lisans", ""))}
+    if not re.match(r"^[0-9a-f]{32}$", out["kurulum_kimligi"]):
+        out["kurulum_kimligi"] = uuid.uuid4().hex
+        json_yaz(EV / "ayar.json", out, gizli=True)
+    return out
+
+
+DIGEST_SHA256 = bytes.fromhex("3031300d060960864801650304020105000420")
+
+
+def b64d(s):
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def rsa_dogrula(n, e, mesaj, imza):
+    k = (n.bit_length() + 7) // 8
+    if len(imza) != k:
+        return False
+    em = pow(int.from_bytes(imza, "big"), e, n).to_bytes(k, "big")
+    di = DIGEST_SHA256 + hashlib.sha256(mesaj).digest()
+    return secrets.compare_digest(em, b"\x00\x01" + b"\xff" * (k - len(di) - 3) + b"\x00" + di)
+
+
+def lisans_dogrula(s, simdi=None):
+    """Çevrimdışı doğrulama. Özel anahtar bu pakette yok; yalnızca lisans_acik.json (herkese açık anahtar) var."""
+    yol = KOK / "lisans_acik.json"
+    if not yol.exists():
+        raise ValueError("Bu sürümde lisans doğrulama anahtarı yok. Satın aldığın sürümü kullan.")
+    try:
+        ak = json.loads(yol.read_text(encoding="utf-8"))
+        n, e = int(ak["n"], 16), int(ak.get("e", 65537))
+        on, p, imza = s.strip().split(".")
+        if on != "OZMIRA1":
+            raise ValueError
+        yuk = b64d(p)
+        if not rsa_dogrula(n, e, yuk, b64d(imza)):
+            raise ValueError
+        d = json.loads(yuk.decode("utf-8"))
+    except (ValueError, KeyError, TypeError, OSError):
+        raise ValueError("Lisans anahtarı geçersiz.")
+    if d.get("plan") != "pro":
+        raise ValueError("Lisans anahtarı geçersiz.")
+    bitis = d.get("bitis", 0)
+    if isinstance(bitis, (int, float)) and bitis and bitis < (simdi or time.time()):
+        raise ValueError("Lisansın süresi dolmuş.")
+    return d
+
+
+def plan():
+    s = ayar_oku()["lisans"]
+    if s:
+        try:
+            lisans_dogrula(s)
+            return "pro"
+        except ValueError:
+            pass
+    return "ucretsiz"
+
+
+def tek_satir_https(ad):
+    """Satıcı, uygulama klasörüne tek satırlık bir https adresi dosyası koyabilir (satin_al.txt, geri_bildirim_adresi.txt)."""
+    try:
+        s = (KOK / ad).read_text(encoding="utf-8").strip().splitlines()[0].strip()
+    except (OSError, IndexError):
+        return ""
+    return s if s.startswith("https://") and len(s) < 300 else ""
+
+
+def hesap_goster():
+    a = ayar_oku()
+    pl = plan()
+    return {"surum": SURUM, "plan": pl, "lisans_var": bool(a["lisans"]), "telemetri": a["telemetri"],
+            "sistem_siniri": PRO_SISTEM if pl == "pro" else UCRETSIZ_SISTEM,
+            "ajan_siniri": AJAN_TAVAN if pl == "pro" else UCRETSIZ_AJAN, "sinirsiz": pl == "pro",
+            "izinli_stiller": list(STILLER) if pl == "pro" else list(UCRETSIZ_STILLER),
+            "satin_al": tek_satir_https("satin_al.txt"), "toplayici_var": bool(tek_satir_https("geri_bildirim_adresi.txt")),
+            "veri_klasoru": str(EV)}
+
+
+def hesap_guncelle(g):
+    if not isinstance(g, dict):
+        raise ValueError("Ayar bir nesne olmalı.")
+    a = ayar_oku()
+    if "telemetri" in g:
+        a["telemetri"] = bool(g["telemetri"])
+    if "lisans" in g:
+        s = temiz(g["lisans"], 2000)
+        if s:
+            lisans_dogrula(s)
+        a["lisans"] = s
+    json_yaz(EV / "ayar.json", a, gizli=True)
+    return hesap_goster()
+
+
+def sayac(anahtar):
+    """Yalnızca sayı tutar (kullanim.json). İzin verilmedikçe hiçbir yere gönderilmez."""
+    with KILIT:
+        k = json_oku(EV / "kullanim.json", {})
+        k = k if isinstance(k, dict) else {}
+        k[anahtar] = int(k.get(anahtar, 0)) + 1
+        try:
+            ev_hazirla()
+            (EV / "kullanim.json").write_text(json.dumps(k, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+
+
+class _YonlendirmeYok(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *a, **k):
+        return None
+
+
+def paylas(yuk):
+    """Yalnızca kullanıcı Hesap penceresinde açıkça izin verdiyse ve paketle gelen https adresi varsa, arka planda gönderir."""
+    a = ayar_oku()
+    adres = tek_satir_https("geri_bildirim_adresi.txt")
+    if not a["telemetri"] or not adres:
+        return False
+    yuk = dict(yuk, surum=SURUM, plan=plan(), kurulum=a["kurulum_kimligi"])
+
+    def is_():
+        try:
+            r = urllib.request.Request(adres, data=json.dumps(yuk, ensure_ascii=False).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+            urllib.request.build_opener(_YonlendirmeYok).open(r, timeout=5).read(1024)
+        except Exception:
+            pass
+    threading.Thread(target=is_, daemon=True).start()
+    return True
+
+
+def kullanim_gonder():
+    k = json_oku(EV / "kullanim.json", {})
+    return paylas({"tur": "kullanim", "sayaclar": {a: v for a, v in k.items() if isinstance(v, int) and not isinstance(v, bool)}})
+
+
+def gunluk_ozet_dongusu():
+    while True:
+        time.sleep(86400)
+        try:
+            kullanim_gonder()
+        except Exception:
+            pass
+
+
+def satir_ekle(yol, kayit, sinir=2000):
+    ev_hazirla()
+    with KILIT:
+        if yol.exists() and yol.stat().st_size > 2 * 1024 * 1024:
+            satirlar = yol.read_text(encoding="utf-8", errors="replace").splitlines()[-sinir:]
+            yol.write_text("\n".join(satirlar) + "\n", encoding="utf-8")
+        with open(yol, "a", encoding="utf-8") as f:
+            f.write(json.dumps(kayit, ensure_ascii=False) + "\n")
+
+
+def geri_bildirim(g):
+    if not isinstance(g, dict) or g.get("tur") not in ("oneri", "hata", "begeni"):
+        raise ValueError("Geri bildirim türü geçersiz.")
+    m = temiz(g.get("metin", ""), 1000)
+    if not m:
+        raise ValueError("Bir şeyler yaz.")
+    satir_ekle(EV / "geri_bildirim.jsonl", {"t": time.time(), "tur": g["tur"], "metin": m})
+    return {"paylasildi": paylas({"tur": g["tur"], "metin": m})}
+
+
+# ---------- ajan listesi ----------
+def frontmatter(metin):
+    if not metin.startswith("---"):
+        return {}
+    son = metin.find("\n---", 3)
+    if son < 0:
+        return {}
+    d = {}
+    for satir in metin[3:son].splitlines():
+        m = re.match(r"^(name|description)\s*:\s*(.*)$", satir.strip())
+        if m:
+            d[m.group(1)] = m.group(2).strip().strip("\"'")
+    return d
+
+
+def ajanlari_tara(sistem):
+    sonuc, gor = [], set()
+    for kl in sistem.get("ajan_klasorleri", []):
+        try:
+            p = Path(os.path.expanduser(kl))
+            if not p.is_dir():
+                continue
+            for f in sorted(p.glob("*.md"))[:AJAN_TAVAN]:
+                try:
+                    with open(f, "r", encoding="utf-8", errors="replace") as fh:
+                        fm = frontmatter(fh.read(4096))
+                except OSError:
+                    continue
+                ad = temiz(fm.get("name") or f.stem, 60)
+                if ad and ad not in gor:
+                    gor.add(ad)
+                    sonuc.append({"ad": ad, "aciklama": temiz(fm.get("description", ""), 300)})
+        except (OSError, ValueError):
+            continue
+    for ad in sistem.get("ajanlar", []):
+        if ad not in gor:
+            gor.add(ad)
+            sonuc.append({"ad": ad, "aciklama": ""})
+    return sonuc[:AJAN_TAVAN]
+
+
+def oneriler():
+    """Bilinen varsayılan ajan klasörlerinden var olanları ve dosya sayısını döndürür. İçerik okunmaz."""
+    adaylar = [("Claude Code ajanları", "~/.claude/agents")]
+    out = []
+    for ad, yol in adaylar:
+        try:
+            p = Path(os.path.expanduser(yol))
+            if p.is_dir():
+                out.append({"ad": ad, "yol": yol, "adet": len(list(p.glob("*.md")))})
+        except OSError:
+            pass
+    return out
+
+
+# ---------- olaylar ----------
+def olay_dosya():
+    return EV / "olaylar.jsonl"
+
+
+def olay_yaz(kayit):
+    ev_hazirla()
+    with KILIT:
+        p = olay_dosya()
+        if p.exists() and p.stat().st_size > MAX_OLAY_DOSYA:
+            satirlar = p.read_text(encoding="utf-8", errors="replace").splitlines()[-2000:]
+            p.write_text("\n".join(satirlar) + "\n", encoding="utf-8")
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(json.dumps(kayit, ensure_ascii=False) + "\n")
+    sayac("olay")
+
+
+def olay_dogrula(o, sistem_idleri):
+    if not isinstance(o, dict):
+        raise ValueError("Olay bir nesne olmalı.")
+    sid = str(o.get("sistem", ""))
+    if sid not in sistem_idleri:
+        raise ValueError("Bilinmeyen sistem: %s" % temiz(sid, 24))
+    ajan = temiz(o.get("ajan", ""), 60)
+    if not ajan:
+        raise ValueError("Ajan adı gerekli.")
+    olay = o.get("olay")
+    if olay not in OLAYLAR:
+        raise ValueError("olay 'basla' ya da 'bitti' olmalı.")
+    kayit = {"t": time.time(), "sistem": sid, "ajan": ajan, "olay": olay, "id": temiz(o.get("id") or (sid + ":" + ajan), 64)}
+    if o.get("is"):
+        kayit["is"] = temiz(o["is"], 120)
+    for k in ("token", "sure_ms"):
+        v = o.get(k)
+        if v is not None:
+            if not isinstance(v, (int, float)) or isinstance(v, bool) or v < 0 or v > 1e9:
+                raise ValueError("%s sayı olmalı." % k)
+            kayit[k] = int(v)
+    return kayit
+
+
+def olaylari_oku(adet=3000):
+    p = olay_dosya()
+    if not p.exists():
+        return []
+    try:
+        with open(p, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            boy = f.tell()
+            f.seek(max(0, boy - 800 * 1024))
+            ham = f.read().decode("utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    out = []
+    for s in ham[-adet:]:
+        try:
+            o = json.loads(s)
+            if isinstance(o, dict):
+                out.append(o)
+        except ValueError:
+            continue
+    return out
+
+
+def durum_uret():
+    pr = profil_oku()
+    if not pr:
+        return {"yok": True}
+    ev = olaylari_oku()
+    simdi = time.time()
+    sistemler = []
+    pl = plan()
+    kota, gizli = (None if pl == "pro" else UCRETSIZ_AJAN), 0
+    for s in pr["sistemler"]:
+        roster = {a["ad"]: dict(a, calisma=0, token=0, son=0, kosuyor=False) for a in ajanlari_tara(s)}
+        toplam, son_ev, acik = 0, 0, {}
+        for e in ev:
+            if e.get("sistem") != s["id"]:
+                continue
+            ad = e.get("ajan")
+            if not isinstance(ad, str):
+                continue
+            if ad not in roster and len(roster) < AJAN_TAVAN:
+                roster[ad] = {"ad": ad, "aciklama": "", "calisma": 0, "token": 0, "son": 0, "kosuyor": False}
+            a = roster.get(ad)
+            if a is None:
+                continue
+            t = e.get("t") if isinstance(e.get("t"), (int, float)) else 0
+            a["son"] = max(a["son"], t)
+            son_ev = max(son_ev, t)
+            if e.get("olay") == "basla":
+                acik[e.get("id") or ad] = (ad, t)
+            elif e.get("olay") == "bitti":
+                acik.pop(e.get("id") or ad, None)
+                a["calisma"] += 1
+                tk = e.get("token") if isinstance(e.get("token"), (int, float)) else 0
+                a["token"] += int(tk)
+                toplam += int(tk)
+        for ad, t in acik.values():
+            if simdi - t < 1800 and ad in roster:
+                roster[ad]["kosuyor"] = True
+        liste = list(roster.values())
+        if kota is not None:
+            gorunen = liste[:max(kota, 0)]
+            if len(gorunen) < len(liste):
+                gizli += len(liste) - len(gorunen)
+                toplam = sum(a["token"] for a in gorunen)
+            kota -= len(gorunen)
+            liste = gorunen
+        sistemler.append({"id": s["id"], "ad": s["ad"], "stil": s["stil"], "renk": s["renk"], "ajanlar": liste,
+                          "token": {"toplam": toplam}, "son_etkinlik": son_ev})
+    return {"yok": False, "uretildi": simdi, "merkez": pr["merkez"], "sistemler": sistemler,
+            "plan": {"ad": pl, "ajan_siniri": UCRETSIZ_AJAN if pl != "pro" else None, "gizli_ajan": gizli}}
+
+
+# ---------- three.js indirici ----------
+def vendor():
+    baslangic = ["build/three.module.js", "examples/jsm/controls/OrbitControls.js", "examples/jsm/postprocessing/EffectComposer.js",
+                 "examples/jsm/postprocessing/RenderPass.js", "examples/jsm/postprocessing/UnrealBloomPass.js",
+                 "examples/jsm/postprocessing/OutputPass.js", "LICENSE"]
+    kuyruk, gorulen = list(baslangic), set()
+    gecici = Path(tempfile.mkdtemp(prefix="ozmira-three-"))
+    try:
+        while kuyruk:
+            yol = kuyruk.pop()
+            if yol in gorulen:
+                continue
+            gorulen.add(yol)
+            url = CDN_TABAN + yol
+            print("  indiriliyor:", yol)
+            try:
+                with urllib.request.urlopen(url, timeout=30) as r:
+                    veri = r.read(4 * 1024 * 1024 + 1)
+            except (urllib.error.URLError, OSError) as e:
+                print("Hata: %s indirilemedi (%s). İnternet bağlantısını kontrol edin." % (yol, e))
+                return 1
+            if not veri or len(veri) > 4 * 1024 * 1024:
+                print("Hata: %s beklenmedik boyutta." % yol)
+                return 1
+            hedef = gecici / yol
+            hedef.parent.mkdir(parents=True, exist_ok=True)
+            hedef.write_bytes(veri)
+            if yol.endswith(".js"):
+                for m in re.finditer(r"""from\s+['"](\.{1,2}/[^'"]+)['"]""", veri.decode("utf-8", errors="replace")):
+                    yeni = posixpath.normpath(posixpath.join(posixpath.dirname(yol), m.group(1)))
+                    if not yeni.startswith(".."):
+                        kuyruk.append(yeni)
+        son = WEB / "vendor" / "three"
+        if son.exists():
+            shutil.rmtree(son)
+        son.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(gecici), str(son))
+        print("Tamam: three.js %s, %d dosya, %s" % (THREE_SURUM, len(gorulen), son))
+        return 0
+    finally:
+        shutil.rmtree(gecici, ignore_errors=True)
+
+
+def yerel_three():
+    return (WEB / "vendor" / "three" / "build" / "three.module.js").exists()
+
+
+# ---------- HTTP ----------
+class Ayar:
+    token = ""
+    lan = False
+    port = PORT0
+    izinli_host = set()
+
+
+MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
+        ".svg": "image/svg+xml", ".json": "application/json; charset=utf-8", ".png": "image/png", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8"}
+
+
+class H(http.server.BaseHTTPRequestHandler):
+    server_version = "OZMIRA"
+    sys_version = ""
+
+    def log_message(self, *a):
+        pass
+
+    # güvenlik başlıkları + CSP
+    def _basliklar(self, ctype, uzunluk, nonce=None, cache="no-store"):
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(uzunluk))
+        self.send_header("Cache-Control", cache)
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Frame-Options", "DENY")
+        cdn = "" if yerel_three() else " https://cdn.jsdelivr.net"
+        n = (" 'nonce-%s'" % nonce) if nonce else ""
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'%s%s; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+                         "connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" % (n, cdn))
+        self.end_headers()
+
+    def _json(self, kod, obj):
+        b = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        self.send_response(kod)
+        self._basliklar("application/json; charset=utf-8", len(b))
+        self.wfile.write(b)
+
+    def _host_ok(self):
+        return self.headers.get("Host", "").lower() in Ayar.izinli_host
+
+    def _yetkili(self):
+        if not self._host_ok():
+            self._json(403, {"hata": "Geçersiz Host."})
+            return False
+        o = self.headers.get("Origin")
+        if o and urllib.parse.urlparse(o).netloc.lower() not in Ayar.izinli_host:
+            self._json(403, {"hata": "Geçersiz kaynak."})
+            return False
+        if not secrets.compare_digest(self.headers.get("X-Token", ""), Ayar.token):
+            self._json(401, {"hata": "Yetkisiz."})
+            return False
+        return True
+
+    def _govde(self):
+        try:
+            n = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            n = -1
+        if n < 0 or n > MAX_GOVDE:
+            self._json(413, {"hata": "Gövde çok büyük."})
+            return None
+        try:
+            return json.loads(self.rfile.read(n).decode("utf-8") or "null")
+        except ValueError:
+            self._json(400, {"hata": "Geçersiz JSON."})
+            return None
+
+    def do_GET(self):
+        u = urllib.parse.urlparse(self.path)
+        p = u.path
+        if p.startswith("/api/"):
+            if not self._yetkili():
+                return
+            if p == "/api/profil":
+                return self._json(200, profil_oku() or {"yok": True})
+            if p == "/api/durum":
+                return self._json(200, durum_uret())
+            if p == "/api/oneri":
+                return self._json(200, {"klasorler": oneriler()})
+            if p == "/api/hesap":
+                return self._json(200, hesap_goster())
+            return self._json(404, {"hata": "Yok."})
+        if not self._host_ok():
+            return self._json(403, {"hata": "Geçersiz Host."})
+        if p in ("/", "/index.html"):
+            if Ayar.lan:
+                k = urllib.parse.parse_qs(u.query).get("k", [""])[0]
+                if not secrets.compare_digest(k, Ayar.token):
+                    return self._json(401, {"hata": "Ağ modunda adresin sonundaki ?k=anahtar gerekli."})
+            return self._index()
+        self._statik(p)
+
+    def _index(self):
+        try:
+            html = (WEB / "index.html").read_text(encoding="utf-8")
+        except OSError:
+            return self._json(500, {"hata": "web/index.html bulunamadı."})
+        nonce = secrets.token_urlsafe(12)
+        if yerel_three():
+            im = {"imports": {"three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/"}}
+            kaynak = "yerel"
+        else:
+            im = {"imports": {"three": CDN_TABAN + "build/three.module.js", "three/addons/": CDN_TABAN + "examples/jsm/"}}
+            kaynak = "cdn"
+        html = (html.replace("{{NONCE}}", nonce).replace("{{IMPORTMAP}}", json.dumps(im)).replace("{{TOKEN}}", Ayar.token).replace("{{KAYNAK}}", kaynak))
+        b = html.encode("utf-8")
+        self.send_response(200)
+        self._basliklar(MIME[".html"], len(b), nonce=nonce)
+        self.wfile.write(b)
+
+    def _statik(self, p):
+        rel = posixpath.normpath(urllib.parse.unquote(p)).lstrip("/")
+        f = (WEB / rel).resolve()
+        kok = WEB.resolve()
+        if rel in ("", ".") or rel.startswith("..") or not (f == kok or kok in f.parents) or not f.is_file() or f.suffix.lower() not in MIME:
+            return self._json(404, {"hata": "Yok."})
+        b = f.read_bytes()
+        self.send_response(200)
+        self._basliklar(MIME.get(f.suffix.lower()) or mimetypes.guess_type(str(f))[0] or "application/octet-stream", len(b))
+        self.wfile.write(b)
+
+    def do_PUT(self):
+        if not self._yetkili():
+            return
+        if self.path not in ("/api/profil", "/api/hesap"):
+            return self._json(404, {"hata": "Yok."})
+        g = self._govde()
+        if g is None:
+            return
+        if self.path == "/api/hesap":
+            try:
+                return self._json(200, hesap_guncelle(g))
+            except ValueError as e:
+                return self._json(400, {"hata": str(e)})
+        try:
+            pr = profil_dogrula(g, plan())
+        except PlanSiniri as e:
+            return self._json(402, {"hata": str(e)})
+        except ValueError as e:
+            return self._json(400, {"hata": str(e)})
+        json_yaz(EV / "profil.json", pr)
+        sayac("profil_kaydet")
+        self._json(200, pr)
+
+    def do_POST(self):
+        if not self._yetkili():
+            return
+        if self.path not in ("/api/olay", "/api/geri-bildirim"):
+            return self._json(404, {"hata": "Yok."})
+        g = self._govde()
+        if g is None:
+            return
+        if self.path == "/api/geri-bildirim":
+            try:
+                return self._json(200, geri_bildirim(g))
+            except ValueError as e:
+                return self._json(400, {"hata": str(e)})
+        pr = profil_oku()
+        if not pr:
+            return self._json(409, {"hata": "Önce profil oluşturun."})
+        try:
+            k = olay_dogrula(g, {s["id"] for s in pr["sistemler"]})
+        except ValueError as e:
+            return self._json(400, {"hata": str(e)})
+        olay_yaz(k)
+        self._json(200, {"tamam": True})
+
+
+def lan_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+class Sunucu(http.server.ThreadingHTTPServer):
+    """Windows'ta SO_REUSEADDR iki sunucunun aynı portu paylaşmasına izin verir
+    ve istekler rastgele birine gider; bu yüzden orada portu özel kullanırız."""
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+def calistir(lan, ac, uygulama=False):
+    Ayar.token = token_al()
+    Ayar.lan = lan
+    sunucu = None
+    for port in range(PORT0, PORT0 + 11):
+        try:
+            sunucu = Sunucu(("0.0.0.0" if lan else "127.0.0.1", port), H)
+            Ayar.port = port
+            break
+        except OSError:
+            continue
+    if sunucu is None:
+        print(m("port_dolu", PORT0, PORT0 + 10))
+        return 1
+    hostlar = {"localhost:%d" % Ayar.port, "127.0.0.1:%d" % Ayar.port, "[::1]:%d" % Ayar.port}
+    ip = lan_ip()
+    if lan:
+        hostlar.add("%s:%d" % (ip, Ayar.port))
+    Ayar.izinli_host = {h.lower() for h in hostlar}
+    print("OZMIRA %s" % SURUM)
+    print("  %-11s: http://localhost:%d/%s" % (m("b_pc"), Ayar.port, ("?k=" + Ayar.token) if lan else ""))
+    if lan:
+        print("  %-11s: http://%s:%d/?k=%s   (%s)" % (m("b_tel"), ip, Ayar.port, Ayar.token, m("b_tel_ag")))
+        print("  " + m("b_uyari"))
+    print("  %-11s: %s" % (m("b_veri"), EV))
+    print("  %-11s: %s" % ("three.js", m("b_yerel") if yerel_three() else m("b_net")))
+    print("  %-11s: %s" % (m("b_plan"), "Pro" if plan() == "pro" else m("b_ucretsiz", UCRETSIZ_SISTEM, UCRETSIZ_AJAN)))
+    print("  %-11s: %s" % (m("b_pay"), m("b_pay_ac") if ayar_oku()["telemetri"] else m("b_pay_kapali")))
+    print("  " + m("b_dur"))
+    threading.Thread(target=gunluk_ozet_dongusu, daemon=True).start()
+    adres = "http://localhost:%d/%s" % (Ayar.port, ("?k=" + Ayar.token) if lan else "")
+    if ac:
+        pencere = None if lan else tarayici_bul() if uygulama else None
+        if uygulama and pencere:
+            print("  " + m("b_pencere"))
+            threading.Timer(0.4, lambda: uygulama_penceresi(pencere, adres, sunucu)).start()
+        else:
+            if uygulama and not lan:
+                print("  " + m("b_tarayici_yok"))
+            try:
+                threading.Timer(0.6, lambda: webbrowser.open(adres)).start()
+            except Exception:
+                pass
+    try:
+        sunucu.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
+# ---------- uygulama penceresi ve kısayol ----------
+def tarayici_bul():
+    """Chrome tabanlı bir tarayıcı (Edge, Chrome, Brave, Chromium) yolunu döndürür; yoksa None."""
+    ozel = os.environ.get("OZMIRA_TARAYICI")
+    if ozel and Path(ozel).is_file():
+        return ozel
+    adaylar = []
+    if os.name == "nt":
+        for k in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"):
+            t = os.environ.get(k)
+            if t:
+                adaylar += [Path(t) / "Microsoft/Edge/Application/msedge.exe", Path(t) / "Google/Chrome/Application/chrome.exe",
+                            Path(t) / "BraveSoftware/Brave-Browser/Application/brave.exe"]
+    elif sys.platform == "darwin":
+        for u in ("Microsoft Edge", "Google Chrome", "Brave Browser", "Chromium"):
+            adaylar.append(Path("/Applications/%s.app/Contents/MacOS/%s" % (u, u)))
+    else:
+        for u in ("microsoft-edge", "google-chrome", "google-chrome-stable", "brave-browser", "chromium", "chromium-browser"):
+            p = shutil.which(u)
+            if p:
+                adaylar.append(Path(p))
+    for a in adaylar:
+        if a.is_file():
+            return str(a)
+    return None
+
+
+def uygulama_komutu(tarayici, adres):
+    """Ayrı bir profil klasörü kullanır: kişisel tarayıcı oturumundan ayrı kalır ve pencere kapanınca süreç biter."""
+    return [tarayici, "--app=" + adres, "--user-data-dir=" + str(EV / "pencere"), "--window-size=1360,860",
+            "--no-first-run", "--no-default-browser-check", "--disable-features=Translate"]
+
+
+def uygulama_penceresi(tarayici, adres, sunucu):
+    try:
+        t0 = time.time()
+        p = subprocess.Popen(uygulama_komutu(tarayici, adres), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        def bekle():
+            p.wait()
+            if time.time() - t0 > 3:      # hemen çıkıyorsa başka bir pencereye devretmiştir; sunucuyu açık bırak
+                sunucu.shutdown()
+        threading.Thread(target=bekle, daemon=True).start()
+    except OSError:
+        webbrowser.open(adres)
+
+
+def masaustu_klasoru():
+    if os.name == "nt":
+        try:
+            r = subprocess.run(["powershell", "-NoProfile", "-Command", "[Environment]::GetFolderPath('Desktop')"], capture_output=True, text=True, timeout=20)
+            if r.stdout.strip():
+                return Path(r.stdout.strip())
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return Path.home() / "Desktop"
+
+
+def desktop_giris(py, betik, ikon):
+    return ("[Desktop Entry]\nType=Application\nName=OZMIRA\nComment=OZMIRA\nExec=\"%s\" \"%s\" --uygulama\nPath=%s\nIcon=%s\nTerminal=false\nCategories=Utility;\n"
+            % (py, betik, Path(betik).parent, ikon))
+
+
+def komut_kisayol():
+    py = sys.executable
+    betik = str(Path(__file__).resolve())
+    ikon = str(KOK / "web" / "icon.png")
+    try:
+        if os.name == "nt":
+            pw = Path(py).with_name("pythonw.exe")
+            exe = str(pw if pw.exists() else py)
+            q = lambda x: str(x).replace("'", "''")
+            ps = ("$d=[Environment]::GetFolderPath('Desktop');$s=(New-Object -ComObject WScript.Shell).CreateShortcut($d+'\\OZMIRA.lnk');"
+                  "$s.TargetPath='%s';$s.Arguments='\"%s\" --uygulama';$s.WorkingDirectory='%s';$s.IconLocation='%s';$s.Save();Write-Output ($d+'\\OZMIRA.lnk')"
+                  % (q(exe), q(betik), q(KOK), q(KOK / "ozmira.ico")))
+            r = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=30)
+            if r.returncode != 0:
+                raise OSError((r.stderr or r.stdout).strip() or "powershell")
+            hedef = r.stdout.strip()
+        elif sys.platform == "darwin":
+            kl = masaustu_klasoru(); kl.mkdir(parents=True, exist_ok=True)
+            dosya = kl / "OZMIRA.command"
+            dosya.write_text('#!/bin/sh\ncd "%s" || exit 1\nexec "%s" "%s" --uygulama\n' % (KOK, py, betik), encoding="utf-8")
+            dosya.chmod(0o755)
+            hedef = str(dosya)
+        else:
+            metin = desktop_giris(py, betik, ikon)
+            uygulamalar = Path.home() / ".local" / "share" / "applications"
+            uygulamalar.mkdir(parents=True, exist_ok=True)
+            (uygulamalar / "ozmira.desktop").write_text(metin, encoding="utf-8")
+            kl = masaustu_klasoru()
+            hedef = str(uygulamalar / "ozmira.desktop")
+            if kl.is_dir():
+                d = kl / "OZMIRA.desktop"
+                d.write_text(metin, encoding="utf-8")
+                d.chmod(0o755)
+                hedef = str(d)
+    except OSError as e:
+        print(m("k_hata", e))
+        return 1
+    print(m("k_tamam", hedef))
+    if not tarayici_bul():
+        print(m("k_yok"))
+    return 0
+
+
+def komut_olay(a):
+    if len(a) < 3 or a[2] not in OLAYLAR:
+        print(m("kul_olay"))
+        return 2
+    pr = profil_oku()
+    if not pr:
+        print(m("once_kur"))
+        return 1
+    o = {"sistem": a[0], "ajan": a[1], "olay": a[2]}
+    rest = a[3:]
+    if rest and rest[0].isdigit():
+        o["token"] = int(rest.pop(0))
+    if rest:
+        o["is"] = " ".join(rest)
+    try:
+        olay_yaz(olay_dogrula(o, {s["id"] for s in pr["sistemler"]}))
+    except ValueError as e:
+        print(m("hata"), e, m("sistem_idleri", ", ".join(s["id"] for s in pr["sistemler"])))
+        return 1
+    print(m("kayit"))
+    return 0
+
+
+def komut_bilgi():
+    pr = profil_oku()
+    pr_txt = (m("i_profil_var", len(pr["sistemler"]), ", ".join(s["id"] for s in pr["sistemler"]))) if pr else m("i_profil_yok")
+    for ad, deger in ((m("i_surum"), SURUM), (m("i_veri"), EV), (m("i_plan"), "Pro" if plan() == "pro" else m("i_ucretsiz")), (m("i_profil"), pr_txt),
+                      (m("i_olay"), len(olaylari_oku(100000))), ("three.js", m("b_yerel") if yerel_three() else m("i_internetten"))):
+        print("%-14s: %s" % (ad, deger))
+    return 0
+
+
+def main(argv):
+    if sys.stdout is None:                      # pythonw (konsolsuz) ile açıldığında print çökmesin
+        sys.stdout = sys.stderr = open(os.devnull, "w")
+    if argv and argv[0] == "vendor":
+        return vendor()
+    if argv and argv[0] == "olay":
+        return komut_olay(argv[1:])
+    if argv and argv[0] == "bilgi":
+        return komut_bilgi()
+    if argv and argv[0] == "kisayol":
+        return komut_kisayol()
+    if argv and argv[0] in ("-h", "--help", "yardim"):
+        print(__doc__)
+        return 0
+    return calistir("--lan" in argv, "--acma" not in argv, "--uygulama" in argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
