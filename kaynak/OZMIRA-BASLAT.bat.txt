@@ -1,0 +1,20 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+rem OZMIRA PROTOTIP: tek tikla baslat. Ilk calistirmada masaustune kisayol da ekler.
+set PY=
+where py >nul 2>nul && set PY=py
+if not defined PY where python >nul 2>nul && set PY=python
+if not defined PY (
+  echo Python bulunamadi / Python not found: https://www.python.org/downloads/
+  pause
+  exit /b 1
+)
+if not exist "%USERPROFILE%\.ozmira\kisayol.ok" (
+  %PY% ozmira.py kisayol >nul 2>nul
+  mkdir "%USERPROFILE%\.ozmira" >nul 2>nul
+  echo ok> "%USERPROFILE%\.ozmira\kisayol.ok"
+)
+where pythonw >nul 2>nul && (start "" pythonw "%~dp0ozmira.py" --uygulama & exit /b 0)
+%PY% ozmira.py --uygulama
+if errorlevel 1 pause

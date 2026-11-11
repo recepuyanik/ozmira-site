@@ -1,5 +1,7 @@
 # OZMIRA
 
+> PROTOTİP: OZMIRA şu an bir prototiptir. Hata görebilirsin, bulduğunu geri bildirim ekranından yaz. Windows'ta başlatmak için `OZMIRA-BASLAT.bat` dosyasına çift tıkla.
+
 Türkçe · [English](README.en.md) · [Deutsch](README.de.md) · [Español](README.es.md)
 
 Kendi yapay zekâ sistemlerini tek bir 3B sahnede gösteren yerel uygulama. Her sistem kendi renginde ve biçiminde görünür (galaksi, hologram lif, çift sarmal, kara delik, küre). Bir ajan çalışmaya başlayınca merkezden ona bir sinyal gider, işi bitince geri döner ve harcanan token sahnede görünür.
@@ -91,7 +93,7 @@ Bir ajan `basla` bildirip 30 dakika içinde `bitti` bildirmezse sahnede çalış
 
 ## Gizlilik ve güvenlik
 
-- **Veri nerede:** ev dizinindeki `.ozmira` klasöründe (`profil.json`, `olaylar.jsonl`, `ayar.json`, `kullanim.json`, `.token`). Başka bir yer için `OZMIRA_HOME` ortam değişkenini ayarla. Bu klasörü paylaşmadığın sürece kimse senin sistemini görmez. Uygulama klasörünün kendisinde kişisel veri yoktur ve paylaşılabilir.
+- **Veri nerede:** ev dizinindeki `.ozmira` klasöründe (`profil.json`, `olaylar.jsonl`, `sohbet.jsonl`, `ayar.json`, `kullanim.json`, `.token`). Başka bir yer için `OZMIRA_HOME` ortam değişkenini ayarla. Bu klasörü paylaşmadığın sürece kimse senin sistemini görmez. Uygulama klasörünün kendisinde kişisel veri yoktur ve paylaşılabilir.
 - **Ağa kapalı:** sunucu yalnızca `localhost`'u dinler. Başka bilgisayarlar bağlanamaz.
 - **Anahtar:** ilk çalıştırmada rastgele bir anahtar üretilir (`.ozmira/.token`; macOS ve Linux'ta yalnızca senin kullanıcın okuyabilir, Windows'ta dosya izinleri farklı çalıştığı için bilgisayarını başkalarıyla paylaşıyorsan klasörü korumalı bir yere koy). Tüm API istekleri bu anahtarı ister; Host ve Origin başlıkları denetlenir.
 - **Paylaşım varsayılan olarak kapalı.** Hesap penceresinden izin verirsen ve bu kopyayla birlikte bir toplayıcı adresi (`geri_bildirim_adresi.txt`) geldiyse, günde en çok bir kez şunlar anonim olarak gönderilir: sürüm, plan, rastgele kurulum kimliği ve sayaçlar (alınan olay sayısı, profil kaydetme sayısı). Sistem adların, ajan adların, iş etiketlerin, klasör yolların, token miktarların ve IP adresin gönderilmez. Geri bildirim penceresine yazdığın metin de yalnızca bu izinle gönderilir; yazdıkların her durumda ayrıca bu bilgisayardaki veri klasörüne kaydedilir.
@@ -143,7 +145,13 @@ Sunucu aynı ağdan erişilebilir olur ve terminal telefon için bir adres yazar
 ## 0.3.0 ile gelenler
 
 - **Panel:** alttaki Panel düğmesi yönetim panelini açar. Özet kutuları, son 7 günün çubukları, aranabilir ve sıralanabilir ajan tablosu, olay listesi ve CSV dışa aktarma. Başlat ve Bitir düğmeleri olayı elle kaydeder; ajanı çalıştırmaz.
-- **Rehber:** alttaki Rehber düğmesi on kısa dersle kurulumu ve ileri konuları anlatır.
+- **Rehber:** alttaki Rehber düğmesi on iki kısa dersle kurulumu ve ileri konuları anlatır.
 - **Claude Code bağlantısı:** `ozmira_hook.py`, Claude Code bir alt ajan başlatırken ve bitirirken OZMIRA'ya olay yollar. Claude Code ayarlarındaki `hooks` bölümüne `PreToolUse` ve `PostToolUse` için (eşleştirici: `Task|Agent`) şu komutu ekle: `python ozmira_hook.py` (tam dosya yoluyla). Sistem kimliği `claude` değilse `OZMIRA_SISTEM` ortam değişkenini ayarla. Sahte girdilerle sınandı; gerçek Claude Code ile denenmedi.
 - **Akış:** paneldeki Akış sekmesi girdi ve çıktı token'larını sistem ve ajan bazında gösterir. Ayrımı bildirmek için: `ozmira.py olay <sistem> <ajan> bitti girdi=800 cikti=400`. Fiyat girersen tahmini maliyeti hesaplar; fiyatlar yalnızca tarayıcıda saklanır.
+- **Ortak sohbet:** alttaki Sohbet düğmesi tek bir yazı kutusu açar. OZMIRA mesajın konusuna bakıp onu kurduğun sistemlerden uygun olana yollar (yazılım Claude, ürün ve fikir ChatGPT, belge ve veri Gemini, gündem ve trend Grok) ve hangisini neden seçtiğini yanıtın üstünde gösterir. Yanıt için o yapay zekânın komut satırı aracı bu bilgisayarda kurulu olmalıdır (`claude`, `codex`, `gemini`); Grok için araç desteği henüz yok. Otomatik testler sahte araçlarla yapıldı; gerçek araçlarla henüz denenmedi. `--lan` modunda sohbet kapalıdır.
+- **Projeler:** sohbette bir proje adı açarsan o projenin mesajları ayrı saklanır ve projeyi yeniden açınca geri gelir. Ücretsiz sürümde 2 proje, Pro'da sınır yok.
+- **Beta sınırı:** ücretsiz sürümde günde 50 sohbet mesajı gönderilebilir. Pro'da sohbet sınırsızdır ve projesiz (genel) geçmiş de saklanır.
+- **Sistem modu (Pro):** alttaki çubuktan bir sisteme odaklanınca adı sahnenin altında büyük yazıyla görünür.
+- **Not kasasına kayıt (isteğe bağlı):** Hesap penceresinde bir not kasası klasörü verirsen her sohbet mesajı, kasanın içindeki `outputs/ozmira/` klasöründe bir Markdown notuna da eklenir (projesiz mesajlar `Genel.md`, proje mesajları proje adını taşıyan dosya). Notlarını bir klasörde Markdown dosyaları olarak tutan not uygulamalarıyla kullanılır. Varsayılan kapalıdır; OZMIRA kasada başka bir yere yazmaz. Linux'ta otomatik testlerle sınandı; gerçek bir not uygulamasıyla henüz denenmedi.
+- **Logodan gelen merkez:** sahnenin merkezi artık OZMIRA işaretinden kurulur: beyaz bir çekirdek ve çevresinde logodaki gibi çapraz kayan halkalar. Halkalar merkez için seçtiğin rengi alır.
 - **Telif:** © 2026 OZMIRA, tüm hakları saklıdır. Ayrıntı `LISANS.txt` içinde.
