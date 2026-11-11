@@ -43,8 +43,8 @@ export function createSahne(host, opts = {}) {
   const rt = new THREE.WebGLRenderTarget(W0 * pixelRatio, H0 * pixelRatio, { type: THREE.HalfFloatType, samples: 4 });
   const composer = new EffectComposer(renderer, rt); composer.setPixelRatio(pixelRatio); composer.setSize(W0, H0);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(W0, H0), 0.2, 0.5, 0.34); composer.addPass(bloom); composer.addPass(new OutputPass());
-  const BLOOM = 0.48; // 0.85 gerçek ekranda göz yoruyordu
+  const bloom = new UnrealBloomPass(new THREE.Vector2(W0, H0), 0.2, 0.45, 0.55); composer.addPass(bloom); composer.addPass(new OutputPass());
+  const BLOOM = 0.30; // 0.85 ve 0.48 gerçek ekranda göz yordu; çekirdekler beyaza yanmasın
 
   // ---------- Ortak yardımcılar ----------
   const pxRefs = [];
@@ -72,13 +72,26 @@ export function createSahne(host, opts = {}) {
 
   // ---------- Merkez çekirdeği ----------
   const merkez = new THREE.Group(); scene.add(merkez);
-  const mm = { core: new THREE.MeshBasicMaterial({ color: 0xf5b82e }), wire: new THREE.MeshBasicMaterial({ color: 0xf5b82e, wireframe: true, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }),
-    ring: new THREE.MeshBasicMaterial({ color: 0xf5b82e, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), halo: spriteMat(0xf5b82e, 0.32) };
-  mm.ring2 = mm.ring.clone(); mm.ring2.opacity = 0.45;
-  merkez.add(new THREE.Mesh(new THREE.SphereGeometry(0.62, 48, 32), mm.core), new THREE.Mesh(new THREE.IcosahedronGeometry(0.98, 2), mm.wire));
-  { const r1 = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.56, 128), mm.ring), r2 = new THREE.Mesh(new THREE.RingGeometry(1.95, 1.99, 128), mm.ring2); r1.rotation.x = r2.rotation.x = -0.32; merkez.add(r1, r2);
-    const h = new THREE.Sprite(mm.halo); h.scale.set(6.5, 6.5, 1); merkez.add(h); }
-  function setMerkezRenk(hex) { const c = new THREE.Color(hex); mm.core.color.copy(c).multiplyScalar(1.3); mm.wire.color.copy(c); mm.ring.color.copy(c); mm.ring2.color.copy(c); mm.halo.color.copy(c); }
+  // OZMIRA işareti (Tünel): beyaz çekirdek, içinde dönen küçük galaksiler, etrafında logodaki gibi çapraz kayan halkalar.
+  const mm = { core: new THREE.MeshBasicMaterial({ color: 0xffffff }), halo: spriteMat(0xffffff, 0.3), halo2: spriteMat(0xf3b84b, 0.16), rings: [] };
+  merkez.add(new THREE.Mesh(new THREE.SphereGeometry(0.34, 32, 24), mm.core));
+  { const h = new THREE.Sprite(mm.halo); h.scale.set(4.2, 4.2, 1); const h2 = new THREE.Sprite(mm.halo2); h2.scale.set(8, 8, 1); merkez.add(h, h2); }
+  const halkaG = new THREE.Group(); merkez.add(halkaG);
+  const HALKA = [[2.05, 0.3], [1.63, 0.5], [1.21, 0.7], [0.79, 0.88]].map(([r, op], i) => {
+    const m = new THREE.MeshBasicMaterial({ color: 0xf3b84b, transparent: true, opacity: op, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+    const mesh = new THREE.Mesh(new THREE.RingGeometry(r - 0.045, r + 0.045, 128), m); halkaG.add(mesh); mm.rings.push(m); return { mesh, k: 4 - i }; });
+  const icGal = [[1.0, 0.5, 0.2, 0.9], [1.45, -0.7, 1.1, -0.6], [0.7, 1.3, -0.4, 1.4]].map(([R, rx, rz, hiz]) => {
+    const N = 520, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) { const r = Math.pow(Math.random(), 0.6) * R, a = (i % 2) * Math.PI + (r / R) * 6.4 + gauss() * 0.22, k = 0.75 + Math.random() * 0.25;
+      pos.set([Math.cos(a) * r, gauss() * 0.03, Math.sin(a) * r], i * 3); col.set([k, k, k * (0.9 + 0.1 * Math.random())], i * 3); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', attr(pos, 3)); g.setAttribute('color', attr(col, 3));
+    const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.14, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false })); pts.frustumCulled = false; pts.rotation.set(rx, 0, rz); merkez.add(pts); return { pts, hiz }; });
+  function setMerkezRenk(hex) { const c = new THREE.Color(hex); mm.rings.forEach((m) => m.color.copy(c)); mm.halo2.color.copy(c); }
+  function merkezGuncelle(t) {
+    halkaG.quaternion.copy(camera.quaternion);
+    HALKA.forEach((h) => { const d = (0.184 + 0.05 * Math.sin(t * 0.8 + h.k * 0.5)) * h.k; h.mesh.position.set(-d, -d, 0); });
+    icGal.forEach((g) => { g.pts.rotation.y = t * 0.25 * g.hiz; });
+  }
 
   // ---------- Görsel stiller ----------
   // Her stil { update(t), place(i,n) -> (t,out)=>out, dyn, titleY } döndürür. Nesneleri objs listesine ekler (silinirken temizlenir).
@@ -304,7 +317,7 @@ export function createSahne(host, opts = {}) {
     if (tween) { const k = clamp((now - tween.t0) / tween.dur, 0, 1), e = ease(k); camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.g0, tween.g1, e); if (tween.dur > 3) bloom.strength = 0.2 + (BLOOM - 0.2) * e; if (k >= 1) { bloom.strength = BLOOM; tween = null; } }
     controls.update();
     ptr.lerp(ndc.x > 5 ? ZERO2 : ndc, 0.04); stars.position.set(ptr.x * 1.2, ptr.y * 0.8, 0);
-    voiceAmp *= Math.pow(0.04, dt); merkez.scale.setScalar(1 + 0.03 * Math.sin(now * 1.5) + voiceAmp * 0.16);
+    voiceAmp *= Math.pow(0.04, dt); merkez.scale.setScalar(1 + 0.03 * Math.sin(now * 1.5) + voiceAmp * 0.16); merkezGuncelle(now);
     systems.forEach((s) => s.b.update(now));
     const W = host.clientWidth, H = host.clientHeight;
     agents.forEach((a) => {
