@@ -48,6 +48,8 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.65 
 body::before { content: ""; position: fixed; inset: -20%; z-index: 0; pointer-events: none; filter: blur(90px);
   background: radial-gradient(34% 30% at 76% 18%, rgba(243, 184, 75, .15) 0, transparent 70%), radial-gradient(30% 28% at 10% 10%, rgba(122, 150, 255, .09) 0, transparent 70%),
     radial-gradient(36% 30% at 88% 78%, rgba(255, 255, 255, .045) 0, transparent 70%), radial-gradient(30% 28% at 16% 88%, rgba(243, 184, 75, .07) 0, transparent 70%); }
+/* Yıldız alanı: sayfanın arkasında sabit, seyrek yıldızlar; ara sıra biri parlar. Kaydırınca çok hafif kayar (derinlik). */
+.yildizlar { position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; display: block; }
 [id] { scroll-margin-top: 24px; }
 [hidden] { display: none !important; }
 .wrap { position: relative; z-index: 1; max-width: 1176px; margin-inline: auto; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
@@ -342,6 +344,7 @@ html.durdu body::before, html.durdu .mt, html.durdu .grad { animation-play-state
 .grad { animation: none !important; background-position: 0 0 !important; }
 </style>
 </head><body>
+<canvas class="yildizlar" id="yildizlar" aria-hidden="true"></canvas>
 
 <a class="skip" href="#ana" data-t="skip">İçeriğe geç</a>
 <header class="wrap">
@@ -709,6 +712,59 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
   boyut();
 })();
 
+
+// Yıldız alanı: yıldızlar bir kez çizilir; her karede yalnızca o an parlayan birkaç yıldız eklenir. Hareket azaltma tercihinde ve "Hareketi durdur" açıkken parlama ve kayma durur.
+(function () {
+  var cv = document.getElementById('yildizlar'); if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d'), taban = document.createElement('canvas'), tc = taban.getContext('2d');
+  var mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  var W = 0, H = 0, dpr = 1, Y = [], parlak = [], raf = 0, son = 0, sonrakiParla = 0, kay = 0, TAU = Math.PI * 2;
+  var sd = 7; function rnd() { sd = (sd * 16807) % 2147483647; return sd / 2147483647; }
+  // Yıldızlar 0-1 koordinatında üretilir; ekran boyu değişince yeniden dağılmaz, yalnızca yeniden çizilir.
+  for (var i = 0; i < 520; i++) {
+    var k = rnd(), r = k < 0.72 ? 0.35 + rnd() * 0.45 : k < 0.95 ? 0.7 + rnd() * 0.5 : 1.1 + rnd() * 0.6;
+    var renk = rnd(); renk = renk < 0.12 ? '248,217,146' : renk < 0.22 ? '214,226,255' : '255,250,238';
+    Y.push({ x: rnd(), y: rnd(), r: r, a: 0.18 + rnd() * 0.5 * (r > 0.9 ? 1.2 : 1), renk: renk, d: rnd() < 0.5 ? 0.04 : 0.09 });
+  }
+  function durgun() { return mq.matches || document.documentElement.classList.contains('durdu'); }
+  function adet() { return Math.min(Y.length, Math.round(W * H / 3600)); }
+  function tabanCiz() {
+    taban.width = cv.width; taban.height = cv.height; tc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var n = adet(); for (var i = 0; i < n; i++) { var s = Y[i]; tc.fillStyle = 'rgba(' + s.renk + ',' + s.a.toFixed(3) + ')'; tc.beginPath(); tc.arc(s.x * W, s.y * H, s.r, 0, TAU); tc.fill(); }
+  }
+  function boyut() { dpr = Math.min(window.devicePixelRatio || 1, 2); W = window.innerWidth; H = Math.max(window.innerHeight, document.documentElement.clientHeight);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); tabanCiz(); ciz(performance.now()); }
+  function parlat(now) { // ara sıra: sırayla yeni bir yıldız seçilip 1,4-2,6 saniyede parlayıp söner
+    if (now < sonrakiParla) return; sonrakiParla = now + 450 + Math.random() * 1500;
+    var n = adet(), s = Y[Math.floor(Math.random() * n)]; if (!s) return;
+    parlak.push({ s: s, t0: now, sure: 1400 + Math.random() * 1200, boy: s.r > 0.9 || Math.random() < 0.3 ? 1 : 0 });
+  }
+  function ciz(now) {
+    var oy = mq.matches ? 0 : kay;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    var py = ((-oy * dpr) % cv.height + cv.height) % cv.height;
+    ctx.drawImage(taban, 0, py - cv.height); ctx.drawImage(taban, 0, py);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalCompositeOperation = 'lighter';
+    parlak = parlak.filter(function (p) { return now - p.t0 < p.sure; });
+    parlak.forEach(function (p) {
+      var f = (now - p.t0) / p.sure, k = Math.sin(Math.PI * f); k *= k;
+      var x = p.s.x * W, y = ((p.s.y * H - oy) % H + H) % H, r = p.s.r;
+      var g = ctx.createRadialGradient(x, y, 0, x, y, 7 + 9 * r); g.addColorStop(0, 'rgba(' + p.s.renk + ',' + (0.55 * k).toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + p.s.renk + ',0)');
+      ctx.fillStyle = g; ctx.fillRect(x - 16 - 9 * r, y - 16 - 9 * r, 32 + 18 * r, 32 + 18 * r);
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * k).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(x, y, r * (1 + 0.8 * k), 0, TAU); ctx.fill();
+      if (p.boy) { var b = (4 + 7 * r) * k; ctx.fillStyle = 'rgba(255,250,236,' + (0.7 * k).toFixed(3) + ')'; ctx.fillRect(x - b, y - 0.5, b * 2, 1); ctx.fillRect(x - 0.5, y - b, 1, b * 2); }
+    });
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  function kare(now) { raf = 0; parlat(now); ciz(now); sira(); }
+  function sira() { if (durgun() || document.hidden) { parlak = []; ciz(0); return; } if (!raf) raf = requestAnimationFrame(kare); }
+  window.addEventListener('scroll', function () { kay = window.scrollY * 0.06; if (durgun()) ciz(0); }, { passive: true });
+  window.addEventListener('resize', boyut);
+  document.addEventListener('visibilitychange', sira);
+  if (mq.addEventListener) mq.addEventListener('change', sira); else if (mq.addListener) mq.addListener(sira);
+  new MutationObserver(sira).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  kay = window.scrollY * 0.06; boyut(); sira();
+})();
 
 // Canlı uygulama klibi: hareket azaltma tercihinde durur ve kapak resmi görünür.
 (function () {
