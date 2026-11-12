@@ -733,6 +733,7 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
     var n = adet(); for (var i = 0; i < n; i++) { var s = Y[i]; tc.fillStyle = 'rgba(' + s.renk + ',' + s.a.toFixed(3) + ')'; tc.beginPath(); tc.arc(s.x * W, s.y * H, s.r, 0, TAU); tc.fill(); }
   }
   function boyut() { dpr = Math.min(window.devicePixelRatio || 1, 2); W = window.innerWidth; H = Math.max(window.innerHeight, document.documentElement.clientHeight);
+    if (!W || !H) return;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); tabanCiz(); ciz(performance.now()); }
   function parlat(now) { // ara sıra: sırayla yeni bir yıldız seçilip 1,4-2,6 saniyede parlayıp söner
     if (now < sonrakiParla) return; sonrakiParla = now + 450 + Math.random() * 1500;
@@ -740,6 +741,7 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
     parlak.push({ s: s, t0: now, sure: 1400 + Math.random() * 1200, boy: s.r > 0.9 || Math.random() < 0.3 ? 1 : 0 });
   }
   function ciz(now) {
+    if (!cv.width || !cv.height || !taban.width || !taban.height) return;
     var oy = mq.matches ? 0 : kay;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
     var py = ((-oy * dpr) % cv.height + cv.height) % cv.height;
