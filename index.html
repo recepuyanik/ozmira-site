@@ -510,7 +510,7 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
           <a class="btn" id="zip" href="ozmira-app.zip" download data-t="in_btn">Ücretsiz indir (zip)</a>
         </div>
       </div>
-      <div class="hash" translate="no">SHA-256: 25546cf7e9c18e591f450208c6877b1f21f023c5233c5a492e83d90683441770</div>
+      <div class="hash" translate="no">SHA-256: 8276e437d2f02f34a7416a9ffa70103e876b20576ef39db740ec0d4826dcb62f</div>
       <details id="tek"><summary data-t="tek_s">Dosyaları tek tek al</summary>
         <p data-t="tek_p">Zip kaydedilemiyorsa her dosyayı ayrı kaydedebilirsin. Dosyaları aynı adlarla, aşağıdaki klasör düzeninde bir klasöre koy ve her adın sonundaki <code>.txt</code> uzantısını sil. Simge dosyaları (<code>ozmira.ico</code>, <code>web/icon.png</code>) yalnızca zip içindedir; onlar olmadan da uygulama çalışır.</p>
         <p class="small files"><a href="kaynak/ozmira.py.txt">ozmira.py</a> · <a href="kaynak/ozmira_hook.py.txt">ozmira_hook.py</a> · <a href="kaynak/LISANS.txt">LISANS.txt</a> · <a href="kaynak/ozmira.bat.txt">ozmira.bat</a> · <a href="kaynak/ozmira.command.txt">ozmira.command</a> · <a href="kaynak/ozmira.sh.txt">ozmira.sh</a> · <a href="kaynak/ozmira-uygulama.bat.txt">ozmira-uygulama.bat</a> · <a href="kaynak/ozmira-uygulama.command.txt">ozmira-uygulama.command</a> · <a href="kaynak/ozmira-uygulama.sh.txt">ozmira-uygulama.sh</a><br>README: <a href="kaynak/README.md">TR</a> · <a href="kaynak/README.en.md">EN</a> · <a href="kaynak/README.de.md">DE</a> · <a href="kaynak/README.es.md">ES</a><br><code>web/</code> <span data-t="tek_web">klasörüne:</span> <a href="kaynak/web/index.html.txt">index.html</a> · <a href="kaynak/web/app.js.txt">app.js</a> · <a href="kaynak/web/i18n.js.txt">i18n.js</a> · <a href="kaynak/web/sahne.js.txt">sahne.js</a> · <a href="kaynak/web/stil.css">stil.css</a> · <a href="kaynak/web/icon.svg.txt">icon.svg</a></p></details>
@@ -611,14 +611,14 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
   function isik(c, x, y, r, renk, al) { var g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(' + renk + ',' + al + ')'); g.addColorStop(1, 'rgba(' + renk + ',0)'); c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2); }
   // Her galaksi bir kez küçük bir tuvale çizilir (sarmal kollar, sis, çekirdek); karede yalnızca döndürülüp yerleştirilir.
   function galaksi(o) {
-    var S = 256, c = document.createElement('canvas'); c.width = c.height = S; var g = c.getContext('2d'), m = S / 2, i, t, a, r, x, y;
+    var S = 640, c = document.createElement('canvas'); c.width = c.height = S; var g = c.getContext('2d'), m = S / 2, i, t, a, r, x, y;
     g.globalCompositeOperation = 'lighter'; isik(g, m, m, m * 0.98, o.renk, 0.16);
-    for (i = 0; i < 300; i++) { t = Math.pow(rnd(), 0.8); a = (i % o.kol) * TAU / o.kol + t * o.tur * TAU + gauss() * 0.11; r = (0.1 + t * 0.8) * m; isik(g, m + Math.cos(a) * r, m + Math.sin(a) * r, (6 + rnd() * 10) * (1 - t * 0.4), o.renk, 0.15 * (1 - t * 0.45)); }
-    for (i = 0; i < o.n; i++) {
+    for (i = 0; i < 300; i++) { t = Math.pow(rnd(), 0.8); var q2 = S / 256; a = (i % o.kol) * TAU / o.kol + t * o.tur * TAU + gauss() * 0.11; r = (0.1 + t * 0.8) * m; isik(g, m + Math.cos(a) * r, m + Math.sin(a) * r, (6 + rnd() * 10) * q2 * (1 - t * 0.4), o.renk, 0.11 * (1 - t * 0.45)); }
+    for (i = 0; i < o.n * 2; i++) {
       if (rnd() < 0.2) { t = Math.sqrt(rnd()); a = rnd() * TAU; } else { t = Math.pow(rnd(), 0.7); a = (i % o.kol) * TAU / o.kol + t * o.tur * TAU + gauss() * (0.08 + t * 0.2); }
-      r = (0.05 + t * 0.9) * m; x = m + Math.cos(a) * r; y = m + Math.sin(a) * r; var b = rnd() < 0.1 ? 2.6 : 1.5;
+      r = (0.05 + t * 0.9) * m; x = m + Math.cos(a) * r; y = m + Math.sin(a) * r; var b = rnd() < 0.1 ? 3.4 : 1.9;
       g.fillStyle = 'rgba(255,253,246,' + ((0.45 + rnd() * 0.55) * (1 - t * 0.5)).toFixed(3) + ')'; g.fillRect(x - b / 2, y - b / 2, b, b); }
-    isik(g, m, m, m * 0.4, o.renk, 0.6); isik(g, m, m, m * 0.16, '255,255,255', 1);
+    isik(g, m, m, m * 0.34, o.renk, 0.5); isik(g, m, m, m * 0.1, '255,255,255', 1);
     return c;
   }
   // s: çap, d: yörünge yarıçapı, ek: yörünge basıklığı, er: yörünge düzleminin açısı, sp: dolanma hızı, e: galaksinin eğimi, don: kendi dönüşü.
@@ -642,12 +642,12 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
     if (!W) return; var q, a, len, lg, n = Math.sin(t * 0.9);
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = 'lighter';
     // 1. Dış hale ve yıldız küresi: ortası aydınlık, içi galaksiler görünsün diye saydam, kenarında ince bir ışık zarı.
-    isik(ctx, cx, cy, R * 1.16, '243,184,75', 0.13); isik(ctx, cx, cy, R * 1.08, '255,244,220', 0.12 + 0.015 * n);
+    isik(ctx, cx, cy, R * 1.16, '243,184,75', 0.07); isik(ctx, cx, cy, R * 1.08, '255,244,220', 0.06 + 0.01 * n);
     lg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R); lg.addColorStop(0, 'rgba(255,255,255,.42)'); lg.addColorStop(0.2, 'rgba(255,253,246,.2)'); lg.addColorStop(0.5, 'rgba(255,250,236,.1)'); lg.addColorStop(0.8, 'rgba(255,246,224,.075)'); lg.addColorStop(0.9, 'rgba(255,242,210,.1)'); lg.addColorStop(1, 'rgba(255,236,190,0)');
     ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
     // 2. Işın yelpazesi
     for (q = 0; q < isin.length; q++) { a = q * TAU / isin.length + isin[q].j + t * 0.022; len = R * (0.56 + 0.6 * isin[q].l * (0.78 + 0.22 * Math.sin(t * 0.6 + q * 1.7)));
-      lg = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len); lg.addColorStop(0, 'rgba(255,255,255,.26)'); lg.addColorStop(1, 'rgba(255,248,228,0)');
+      lg = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len); lg.addColorStop(0, 'rgba(255,255,255,.15)'); lg.addColorStop(1, 'rgba(255,248,228,0)');
       ctx.strokeStyle = lg; ctx.lineWidth = q % 4 ? 0.8 : 1.7; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); ctx.stroke(); }
     // 3. Yıldız tozu ve birkaç pırıltı
     toz.forEach(function (p) { var a = p.a + t * p.sp; ctx.fillStyle = 'rgba(255,250,235,' + (p.al * (0.6 + 0.4 * Math.sin(t * 1.3 + p.ph))).toFixed(3) + ')'; ctx.fillRect(cx + Math.cos(a) * p.r * R, cy + Math.sin(a) * p.r * R, p.s, p.s); });
@@ -659,12 +659,12 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
     // 5. Logodaki halkalar: büyüdükçe sol alta kayar, hepsi ışık noktasına doğru bir tünel kurar
     HALKA.forEach(function (h) { var kay = (5 + 1.4 * Math.sin(t * 0.8 + h[2] * 0.5)) * h[2] * u, x = cx - kay, y = cy + kay, r = h[0] * u;
       lg = ctx.createLinearGradient(x - r, y + r, x + r, y - r); lg.addColorStop(0, 'rgba(243,184,75,' + h[1] * 0.55 + ')'); lg.addColorStop(1, 'rgba(250,214,140,' + h[1] + ')');
-      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.strokeStyle = 'rgba(243,184,75,' + h[1] * 0.1 + ')'; ctx.lineWidth = 6 * u; ctx.stroke(); ctx.strokeStyle = lg; ctx.lineWidth = Math.max(1.2, 1.9 * u); ctx.stroke(); });
+      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.strokeStyle = 'rgba(243,184,75,' + h[1] * 0.05 + ')'; ctx.lineWidth = 4 * u; ctx.stroke(); ctx.strokeStyle = lg; ctx.lineWidth = Math.max(1.2, 1.9 * u); ctx.stroke(); });
     // 6. Çekirdek ışığı, öndeki galaksiler, dikenler ve beyaz çekirdek
-    isik(ctx, cx, cy, R * 0.6, '255,255,255', 0.36 + 0.03 * n); isik(ctx, cx, cy, R * 0.3, '255,255,255', 0.95);
+    isik(ctx, cx, cy, R * 0.55, '255,255,255', 0.16 + 0.02 * n); isik(ctx, cx, cy, R * 0.22, '255,255,255', 0.8);
     GAL.forEach(function (g) { if (g.z >= 0) galCiz(g, g.z, t); });
     ctx.globalAlpha = 1; len = 1 + 0.04 * n;
-    for (q = 0; q < 4; q++) { a = q * Math.PI / 2; var uz = R * (q % 2 ? 1.0 : 1.14) * len; diken(a, uz, 6 * u, 0.14); diken(a, uz, 2.1 * u, 0.9); }
+    for (q = 0; q < 4; q++) { a = q * Math.PI / 2; var uz = R * (q % 2 ? 1.0 : 1.14) * len; diken(a, uz, 5 * u, 0.06); diken(a, uz, 1.5 * u, 0.8); }
     for (q = 0; q < 4; q++) diken(Math.PI / 4 + q * Math.PI / 2, R * 0.5 * (2 - len), 1.3 * u, 0.5);
     ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, 12 * u, 0, TAU); ctx.fill();
   }
