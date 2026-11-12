@@ -139,10 +139,17 @@ El servidor pasa a ser accesible desde la misma red y el terminal muestra una di
 
 - La escena es una imagen 3D pesada. En tarjetas gráficas antiguas o con el ahorro de batería activado, la calidad baja sola; el brillo puede desactivarse.
 - Tope técnico (también en Pro): 24 sistemas, 200 agentes por sistema. Con más de 8 sistemas la escena crece y la cámara se aleja; esta disposición aún no se ha probado visualmente en una tarjeta gráfica real.
-- Versión 0.3.2. Diseñada solo para uso local.
+- Versión 0.3.3. Diseñada solo para uso local.
 - La ventana de aplicación y el acceso directo del escritorio se probaron con pruebas automáticas en Linux; el comando del acceso directo aún no se ha probado en un equipo real con Windows o macOS. Si no funciona, usa `ozmira-uygulama.bat` / `.command`.
 - Las traducciones de los cuatro idiomas se prepararon con IA; un hablante nativo de inglés, alemán o español debería revisarlas.
 - La escena se probó en un único equipo Windows con tarjeta gráfica real. Si en otras tarjetas la escena no aparece en el primer inicio, comprueba que WebGL esté activado en el navegador.
+
+## Novedades de 0.3.3 (chat)
+
+- **Bloques de código:** el código de una respuesta de IA aparece en su propio recuadro con el nombre del lenguaje; el `código en línea` también se distingue.
+- **Redirección sin herramienta:** si la herramienta de línea de comandos del sistema experto (p. ej. ChatGPT) no está en este equipo, el mensaje va a un sistema con la herramienta instalada y la respuesta lo indica.
+- **Límite diario:** los mensajes que no llegaron a ejecutarse (sin herramienta) ya no cuentan para los 50 mensajes diarios de la versión gratuita.
+- **Codex:** `codex exec` ahora también funciona fuera de un repositorio git (`--skip-git-repo-check`).
 
 ## Novedades de 0.3.2 (seguridad)
 

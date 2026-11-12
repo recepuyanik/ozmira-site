@@ -290,6 +290,7 @@ const S = {
   's.otomatik': ["Otomatik seç", "Choose automatically", "Automatisch wählen", "Elegir automáticamente"],
   's.yok': ["araç yok", "no tool", "kein Werkzeug", "sin herramienta"],
   's.neden': ["{alan} · eşleşen: {soz}", "{alan} · matched: {soz}", "{alan} · Treffer: {soz}", "{alan} · coincide: {soz}"],
+  's.yedek': ["{ad} aracı bu bilgisayarda yok; mesaj aracı kurulu sisteme gönderildi.", "{ad} has no tool on this computer; the message went to a system whose tool is installed.", "Für {ad} ist auf diesem Computer kein Werkzeug installiert; die Nachricht ging an ein System mit installiertem Werkzeug.", "{ad} no tiene herramienta en este equipo; el mensaje se envió a un sistema con la herramienta instalada."],
   's.belirsiz': ["konu belirsiz, varsayılan sistem", "topic unclear, default system", "Thema unklar, Standardsystem", "tema poco claro, sistema predeterminado"],
   's.elle': ["elle seçildi", "chosen by hand", "von Hand gewählt", "elegido a mano"],
   's.aracYok': ["{ad} için komut satırı aracı bu bilgisayarda bulunamadı. Mesaj kaydedildi; aracı kurunca yeniden gönder.", "No command-line tool for {ad} was found on this computer. The message was saved; send it again once the tool is installed.", "Für {ad} wurde auf diesem Computer kein Kommandozeilenwerkzeug gefunden. Die Nachricht wurde gespeichert; sende sie erneut, sobald das Werkzeug installiert ist.", "No se encontró en este equipo ninguna herramienta de línea de comandos para {ad}. El mensaje se guardó; envíalo de nuevo cuando la herramienta esté instalada."],

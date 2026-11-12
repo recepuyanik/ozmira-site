@@ -139,10 +139,17 @@ Der Server ist dann aus demselben Netzwerk erreichbar, und das Terminal zeigt ei
 
 - Die Szene ist ein aufwendiges 3D-Bild. Auf alten Grafikkarten oder im Energiesparmodus sinkt die Qualität von selbst; der Leuchteffekt kann entfallen.
 - Technische Obergrenze (auch in Pro): 24 Systeme, 200 Agenten pro System. Bei mehr als 8 Systemen wird die Szene größer und die Kamera rückt weg; diese Anordnung wurde auf einer echten Grafikkarte noch nicht visuell erprobt.
-- Version 0.3.2. Nur für die lokale Nutzung gedacht.
+- Version 0.3.3. Nur für die lokale Nutzung gedacht.
 - Das App-Fenster und die Desktop-Verknüpfung wurden unter Linux mit automatischen Tests geprüft; der Verknüpfungsbefehl wurde auf einem echten Windows- oder macOS-Computer noch nicht ausprobiert. Funktioniert er nicht, nutze `ozmira-uygulama.bat` / `.command`.
 - Die Übersetzungen der vier Sprachen wurden mit KI erstellt; ein Muttersprachler für Englisch, Deutsch oder Spanisch sollte sie prüfen.
 - Die Szene wurde auf einem einzelnen Windows-Computer mit echter Grafikkarte erprobt. Erscheint sie auf anderen Grafikkarten beim ersten Start nicht, prüfe, ob WebGL im Browser aktiviert ist.
+
+## Neu in 0.3.3 (Chat)
+
+- **Codeblöcke:** Code in einer KI-Antwort erscheint in einem eigenen Kasten mit Sprachnamen; `Inline-Code` wird ebenfalls abgesetzt.
+- **Weiterleitung ohne Werkzeug:** Ist das Kommandozeilenwerkzeug des Fachsystems (z. B. ChatGPT) auf diesem Computer nicht installiert, geht die Nachricht an ein System mit installiertem Werkzeug, und die Antwort sagt das.
+- **Tageskontingent:** Nachrichten, die nie liefen (kein Werkzeug gefunden), zählen nicht mehr zu den 50 Nachrichten pro Tag der kostenlosen Version.
+- **Codex:** `codex exec` läuft jetzt auch außerhalb eines Git-Repositorys (`--skip-git-repo-check`).
 
 ## Neu in 0.3.2 (Sicherheit)
 

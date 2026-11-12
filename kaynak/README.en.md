@@ -139,10 +139,17 @@ The server becomes reachable from the same network and the terminal prints an ad
 
 - The scene is a heavy 3D image. On old graphics cards or in battery saver mode the quality drops by itself; glow may switch off.
 - Technical ceiling (Pro included): 24 systems, 200 agents per system. With more than 8 systems the scene grows and the camera moves back; this layout has not yet been visually tried on a real graphics card.
-- Version 0.3.2. Designed for local use only.
+- Version 0.3.3. Designed for local use only.
 - The app window and desktop shortcut were tested with automated tests on Linux; the shortcut command has not yet been tried on a real Windows or macOS computer. If it does not work, use `ozmira-uygulama.bat` / `.command`.
 - The translations of the four languages were prepared with AI; a native speaker of English, German or Spanish should review them.
 - The scene was tried on a single Windows computer with a real graphics card. If the scene does not appear on first start on other graphics cards, check that WebGL is enabled in the browser.
+
+## New in 0.3.3 (chat)
+
+- **Code blocks:** code in an AI answer shows in its own box with the language name; `inline code` is set apart too.
+- **Routing when a tool is missing:** if the topic expert's command-line tool (e.g. ChatGPT) is not on this computer, the message goes to a system whose tool is installed, and the answer says so.
+- **Daily limit:** messages that never ran (no tool found) no longer count against the free version's 50 messages a day.
+- **Codex:** `codex exec` now also runs outside a git repository (`--skip-git-repo-check`).
 
 ## New in 0.3.2 (security)
 

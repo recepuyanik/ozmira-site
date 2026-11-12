@@ -162,3 +162,39 @@ label.f.flat { margin-bottom: 0; } .hint.sep { margin-top: 8px; }
 .hud .hrf { display: inline-block; opacity: 0; transform: translateY(5px); animation: hrf-gel .32s ease-out forwards; }
 @keyframes hrf-gel { to { opacity: 1; transform: none; } }
 .card b, .side div { font-variant-numeric: tabular-nums; }
+
+/* Sohbet yanıtı: paragraflar, satır içi kod ve kod blokları (app.js yanitCiz) */
+.msg .yanit { display: grid; gap: 8px; }
+.msg .yanit p { white-space: pre-wrap; }
+.msg code { font: 500 12.5px/1.5 var(--mono); background: rgba(255, 255, 255, .07); border-radius: 5px; padding: 1px 5px; }
+.msg pre.kod { position: relative; margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(4, 6, 12, .9); border: 1px solid var(--line); overflow-x: auto; max-width: 100%; }
+.msg pre.kod code { display: block; background: none; padding: 0; white-space: pre; }
+.msg pre.kod[data-dil]::before { content: attr(data-dil); display: block; margin-bottom: 6px; font: 500 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
+.msg p.yedek { color: var(--mute); font-size: 12px; margin-bottom: 6px; }
+
+/* Tasarım cilası (Emil Kowalski design-eng + impeccable craft-floor, 12 Kasım 2026).
+   Kimlik değişmez; yalnızca görünmeyen ayrıntılar: güçlü ease-out, basınca küçülen düğmeler,
+   pencerenin yumuşak girişi, tarayıcının kendi yüzeyleri (seçim, imleç, kaydırma çubuğu) ve tipografi. */
+:root { --ease-out: cubic-bezier(.23, 1, .32, 1); --ease-in-out: cubic-bezier(.77, 0, .175, 1); }
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+::selection { background: rgba(245, 184, 46, .32); color: var(--ink); }
+input, textarea { caret-color: var(--gold); }
+html, .panel, .chat, .modal { scrollbar-width: thin; scrollbar-color: rgba(232, 236, 244, .22) transparent; }
+h1, h2, h3 { text-wrap: balance; } .lead, .panel p { text-wrap: pretty; }
+/* Basılabilen her şey basıldığını hisseder (0.97, 160 ms); renk geçişleri yalnızca ilgili özelliklerde. */
+.btn, .chip, .dock button, .tab, .les, .card .x {
+  transition: transform 160ms var(--ease-out), background-color 200ms ease, border-color 200ms ease, color 200ms ease, filter 200ms ease; }
+.btn:not([disabled]):active, .chip:active, .dock button:active, .les:active, .card .x:active { transform: scale(.97); }
+/* Pencere: gizliden görünür olunca bir kez, ölçek 0.96'dan (0'dan değil) ve ease-out ile girer; içerik yeniden çizilince tekrar oynamaz. */
+.modal:not([hidden]) { transition: opacity 200ms var(--ease-out); }
+.modal:not([hidden]) .panel { transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); }
+@starting-style {
+  .modal:not([hidden]) { opacity: 0; }
+  .modal:not([hidden]) .panel { opacity: 0; transform: translateY(6px) scale(.96); }
+}
+/* Hover yalnızca fareyle: dokunmatik ekranda yapışkan hover kalmaz. */
+@media (hover: none) { .btn:not(.main):hover { border-color: var(--line); } .btn.main:hover { filter: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .btn:active, .chip:active, .dock button:active, .les:active { transform: none; }
+}

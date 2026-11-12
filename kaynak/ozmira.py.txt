@@ -39,7 +39,7 @@ import uuid
 import webbrowser
 from pathlib import Path
 
-SURUM = "0.3.2"
+SURUM = "0.3.3"
 KOK = Path(__file__).resolve().parent
 WEB = KOK / "web"
 EV = Path(os.environ.get("OZMIRA_HOME") or (Path.home() / ".ozmira"))
@@ -745,7 +745,7 @@ def durum_uret():
 
 # ---------- Ortak sohbet: yönlendirme ve çalıştırma ----------
 # Araç yalnızca bu sabit listeden seçilir; kullanıcı metni komut satırına değil, aracın standart girdisine yazılır.
-SOHBET_ARAC = {"claude": ["claude", "-p"], "chatgpt": ["codex", "exec", "-"], "gemini": ["gemini"]}
+SOHBET_ARAC = {"claude": ["claude", "-p"], "chatgpt": ["codex", "exec", "--skip-git-repo-check", "-"], "gemini": ["gemini"]}
 SOHBET_ALAN = {
     "claude": ("yazılım", ["kod", "yazılım", "yazilim", "hata", "bug", "fonksiyon", "api", "test", "mimari", "veritaban", "script", "python", "javascript",
                             "sunucu", "derle", "code", "software", "debug", "function", "database", "refactor", "server", "compile", "programm", "código", "fehler"]),
@@ -788,14 +788,26 @@ def sohbet_arac_yolu(tur):
 
 
 def sohbet_yonlendir(metin, sistemler):
-    """Mesajdaki anahtar sözcüklere göre sistem seçer. Dönen: (sistem, eşleşen sözcükler, belirsiz mi)."""
+    """Mesajdaki anahtar sözcüklere göre sistem seçer. Dönen: (sistem, eşleşen sözcükler, belirsiz mi[, asıl uzman]).
+    Dördüncü öğe yalnızca konunun uzmanının aracı kurulu olmadığı için başka sisteme geçildiğinde vardır."""
     kucuk = metin.lower()
-    en_iyi, en_puan, en_soz = None, 0, []
-    for s in sistemler:
-        tur = sohbet_tur(s)
-        soz = [k for k in SOHBET_ALAN.get(tur, ("", []))[1] if k in kucuk]
-        if len(soz) > en_puan:
-            en_iyi, en_puan, en_soz = s, len(soz), soz
+
+    def sec(aday):
+        en_iyi, en_puan, en_soz = None, 0, []
+        for s in aday:
+            soz = [k for k in SOHBET_ALAN.get(sohbet_tur(s), ("", []))[1] if k in kucuk]
+            if len(soz) > en_puan:
+                en_iyi, en_puan, en_soz = s, len(soz), soz
+        return en_iyi, en_soz
+
+    en_iyi, en_soz = sec(sistemler)
+    if en_iyi is not None and sohbet_arac_yolu(sohbet_tur(en_iyi)):
+        return en_iyi, en_soz[:5], False
+    araclilar = [s for s in sistemler if sohbet_arac_yolu(sohbet_tur(s))]
+    if en_iyi is not None and araclilar:
+        # Konunun uzmanının aracı bu bilgisayarda yok: aracı olanlardan en uygun olana (yoksa ilkine) yollanır.
+        yedek, soz = sec(araclilar)
+        return (yedek or araclilar[0]), (soz if yedek else [])[:5], False, en_iyi
     if en_iyi is not None:
         return en_iyi, en_soz[:5], False
     for s in sistemler:  # eşleşme yok: aracı kurulu ilk sistem
@@ -836,7 +848,9 @@ def sohbet_durum(proje=""):
     pr = profil_oku()
     bugun = time.strftime("%Y-%m-%d")
     kayit = sohbet_oku()
-    sayi = sum(1 for k in kayit if isinstance(k.get("t"), (int, float)) and time.strftime("%Y-%m-%d", time.localtime(k["t"])) == bugun)
+    # Aracı bulunamadığı için hiç çalışmayan mesajlar günlük haktan düşmez.
+    sayi = sum(1 for k in kayit if isinstance(k.get("t"), (int, float)) and k.get("neden") != "arac_yok"
+               and time.strftime("%Y-%m-%d", time.localtime(k["t"])) == bugun)
     pro = plan() == "pro"
     sistemler = []
     for s in (pr or {}).get("sistemler", [])[: (PRO_SISTEM if pro else UCRETSIZ_SISTEM)]:
@@ -878,11 +892,16 @@ def sohbet_gonder(g):
         if not sec:
             raise ValueError("Bilinmeyen sistem: %s" % temiz(str(hedef), 24))
         sistem, sozler, belirsiz = sec[0], [], False
+        yedek_ad = ""
     else:
-        sistem, sozler, belirsiz = sohbet_yonlendir(metin, sistemler)
+        y = sohbet_yonlendir(metin, sistemler)
+        sistem, sozler, belirsiz = y[:3]
+        yedek_ad = y[3]["ad"] if len(y) > 3 else ""
     tur = sohbet_tur(sistem)
     argv = sohbet_arac_yolu(tur)
     kayit = {"t": time.time(), "sistem": sistem["id"], "metin": metin, "sozler": sozler, "belirsiz": belirsiz, "elle": bool(hedef), "calisti": False, "yanit": "", "neden": "", "proje": proje}
+    if yedek_ad:
+        kayit["yedek"] = temiz(yedek_ad, 24)
     if not argv:
         kayit["neden"] = "arac_yok"
     elif not SOHBET_KILIT.acquire(blocking=False):

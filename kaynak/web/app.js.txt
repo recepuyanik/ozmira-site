@@ -391,6 +391,22 @@ function karaDelik(tuval) {
   return durdur;
 }
 
+// Yapay zekâ yanıtındaki ``` kod bloklarını ve `satır içi kod`u ayrı gösterir. Yalnızca textContent; HTML hiç yorumlanmaz.
+function yanitCiz(metin) {
+  const out = [], s = String(metin == null ? '' : metin), re = /```([\w+#.-]*)[^\n]*\n?([\s\S]*?)(?:```|$)/g;
+  let son = 0, m;
+  const duz = (parca) => parca.split(/\n{2,}/).map((x) => x.replace(/^\n+|\n+$/g, '')).filter(Boolean).forEach((x) => {
+    const p = h('p'); x.split(/(`[^`\n]+`)/).forEach((y) => { if (/^`[^`\n]+`$/.test(y)) p.append(h('code', { text: y.slice(1, -1) })); else if (y) p.append(document.createTextNode(y)); }); out.push(p);
+  });
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > son) duz(s.slice(son, m.index));
+    const kod = m[2].replace(/\n+$/, '');
+    out.push(h('pre', { class: 'kod', ...(m[1] ? { 'data-dil': m[1] } : {}) }, h('code', { text: kod })));
+    son = re.lastIndex; if (m[0].length === 0) re.lastIndex++;
+  }
+  if (son < s.length) duz(s.slice(son));
+  return out.length ? out : [h('p', { text: s })];
+}
 // ---------- Ortak sohbet: OZMIRA mesajı konusuna göre doğru yapay zekâya yollar ----------
 let sohbetAkisi = [];
 function sohbetPenceresi() {
@@ -415,8 +431,9 @@ function sohbetPenceresi() {
     const dugumler = kayitlar.flatMap((k) => [
       benim(k.metin),
       h('div', { class: 'msg ai' }, h('div', { class: 'who' }, h('i', { class: 'dot', style: 'background:' + k.renk }), h('b', { text: k.ad }),
-        h('span', { text: k.elle ? t('s.elle') : k.belirsiz ? t('s.belirsiz') : t('s.neden', { alan: k.alan, soz: (k.sozler || []).join(', ') }) })),
-        h('p', { class: k.calisti ? '' : 'warn', text: k.calisti ? k.yanit : neden(k) }))]);
+        h('span', { text: k.elle ? t('s.elle') : k.yedek ? (k.sozler && k.sozler.length ? t('s.neden', { alan: k.alan, soz: k.sozler.join(', ') }) : '') : k.belirsiz ? t('s.belirsiz') : t('s.neden', { alan: k.alan, soz: (k.sozler || []).join(', ') }) })),
+        k.yedek ? h('p', { class: 'yedek', text: t('s.yedek', { ad: k.yedek }) }) : null,
+        k.calisti ? h('div', { class: 'yanit' }, ...yanitCiz(k.yanit)) : h('p', { class: 'warn', text: neden(k) }))]);
     if (bekleyen) dugumler.push(benim(bekleyen), h('div', { class: 'msg wait' }, h('p', { text: t('s.bekle') })));   // yanıt gelene kadar mesaj görünür kalır
     if (!dugumler.length) dugumler.push(h('p', { class: 'hint', text: t('s.bos') }));
     liste.replaceChildren(...dugumler);

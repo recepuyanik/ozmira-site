@@ -137,10 +137,17 @@ Sunucu aynı ağdan erişilebilir olur ve terminal telefon için bir adres yazar
 
 - Sahne ağır bir 3B görüntüdür. Eski ekran kartlarında ya da pil tasarrufundayken kalite kendiliğinden düşer; ışıma kapanabilir.
 - Teknik tavan (Pro dahil): 24 sistem, sistem başına 200 ajan. 8'den fazla sistemde sahne büyür ve kamera uzaklaşır; bu yerleşim gerçek ekran kartında henüz görsel olarak denenmedi.
-- Sürüm 0.3.2. Yalnızca yerel kullanım için tasarlandı.
+- Sürüm 0.3.3. Yalnızca yerel kullanım için tasarlandı.
 - Uygulama penceresi ve masaüstü kısayolu Linux'ta otomatik testlerle sınandı; Windows ve macOS'ta kısayol komutu henüz gerçek bir bilgisayarda denenmedi. Çalışmazsa `ozmira-uygulama.bat` / `.command` dosyalarını kullan.
 - Dört dilin çevirileri yapay zekâ ile hazırlandı; ana dili İngilizce, Almanca ya da İspanyolca olan biri bir gözden geçirmeli.
 - Sahne tek bir Windows bilgisayarda gerçek ekran kartıyla denendi. Diğer ekran kartlarında ilk açılışta sahne görünmezse tarayıcıda WebGL'in açık olduğunu kontrol et.
+
+## 0.3.3 ile gelenler (sohbet)
+
+- **Kod blokları:** yapay zekâ yanıtındaki kod ayrı bir kutuda, dil adıyla görünür; `satır içi kod` da ayrı görünür.
+- **Araç yoksa yönlendirme:** konunun uzmanının (ör. ChatGPT) komut satırı aracı bu bilgisayarda yoksa mesaj aracı kurulu sisteme gider ve yanıtın üstünde bu yazılır.
+- **Günlük hak:** hiç çalışmayan (aracı bulunamayan) mesajlar ücretsiz sürümün günlük 50 mesaj hakkından düşmez.
+- **Codex:** `codex exec` artık git deposu dışında da çalışır (`--skip-git-repo-check`).
 
 ## 0.3.2 ile gelenler (güvenlik)
 
