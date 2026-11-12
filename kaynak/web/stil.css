@@ -56,6 +56,7 @@ textarea { min-height: 64px; resize: vertical; font-family: var(--mono); font-si
 input[type=color] { width: 44px; height: 38px; padding: 2px; border-radius: 10px; border: 1px solid var(--line); background: var(--field); cursor: pointer; }
 input:focus-visible, select:focus-visible, textarea:focus-visible, .btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 select option { background: #0e1527; }
+::placeholder { color: var(--mute); opacity: 1; }
 .row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; } .row > * { min-width: 0; } .row .grow { flex: 1 1 160px; }
 .sys { padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, .025); margin-bottom: 12px; }
 .sys header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font: 500 11px/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
@@ -92,6 +93,8 @@ select option { background: #0e1527; }
 .bar i { display: block; min-height: 2px; border-radius: 4px 4px 0 0; background: var(--gold); opacity: .85; }
 .bar span { font: 500 10px/1 var(--mono); color: var(--mute); text-transform: uppercase; }
 .tbl-wrap { overflow-x: auto; }
+/* Dar ekranda tablo sıkışıp adları harf harf bölmek yerine kendi kutusunda yana kayar. */
+@media (max-width: 720px) { .tbl-wrap > .tbl { min-width: 600px; } }
 .tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .tbl th { text-align: left; padding: 8px 10px; font: 600 10px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mute); border-bottom: 1px solid var(--line); white-space: nowrap; }
 .tbl td { padding: 9px 10px; border-bottom: 1px solid rgba(232, 236, 244, .07); vertical-align: top; overflow-wrap: anywhere; }
@@ -101,7 +104,7 @@ select option { background: #0e1527; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
 .pill { display: inline-block; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); font: 500 10.5px/1.3 var(--mono); color: var(--mute); white-space: nowrap; }
 .pill.run { color: var(--gold); border-color: var(--gold); background: rgba(245, 184, 46, .08); }
-.tools { margin-bottom: 10px; align-items: center; } .tools select { width: auto; max-width: 100%; }
+.tools { margin-bottom: 10px; align-items: center; } .tools.ends { align-items: end; } .tools select { width: auto; max-width: 100%; }
 .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mute); white-space: nowrap; }
 .guide { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 22px; }
 .guide nav { display: grid; gap: 4px; align-content: start; } .guide nav h3:first-child { margin-top: 0; }
@@ -110,8 +113,9 @@ select option { background: #0e1527; }
 .les i { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font: 500 10px/1 var(--mono); font-style: normal; }
 .les.done i { color: var(--ok); border-color: var(--ok); } .les.on i { border-color: var(--gold); }
 .guide article { min-width: 0; } .guide article p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.6; max-width: 62ch; }
-.guide article .row { margin-top: 16px; }
-@media (max-width: 720px) { .guide { grid-template-columns: minmax(0, 1fr); } }
+.guide article .row { margin-top: 16px; } .guide article h2:focus { outline: none; }
+/* Dar ekranda ders listesi kısa bir kaydırma kutusu olur; seçilen ders hemen altında görünür. */
+@media (max-width: 720px) { .guide { grid-template-columns: minmax(0, 1fr); } .guide nav { max-height: 32vh; overflow-y: auto; padding: 2px; border-bottom: 1px solid var(--line); } }
 /* Akış sekmesi: girdi solda, sistem ortada, çıktı sağda */
 .flow { display: grid; gap: 8px; margin: 4px 0 10px; }
 .flow-h, .flow-r { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 150px) minmax(0, 1fr); gap: 10px; align-items: center; }
@@ -123,3 +127,38 @@ select option { background: #0e1527; }
 .tbl tr.sum td { border-top: 1px solid var(--line); } .tbl tfoot td { border-bottom: 0; }
 .prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .price { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); } .price > div { grid-column: 1 / -1; font-size: 12.5px; }
+.sig { display: flex; align-items: center; gap: 8px; } .sig svg { width: 16px; height: 16px; color: #f3b84b; opacity: .9; flex: none; }
+/* Ortak sohbet ve sistem modu */
+/* Mesaj listesinin arkasında yazı karakterleriyle çizilen kara delik (süs; app.js karaDelik). Düşük opaklıkta durur ve
+   mesaj balonları neredeyse opak olduğu için yazının kontrastı arka plandan etkilenmez. */
+.chat-wrap { position: relative; margin-bottom: 10px; border-radius: 12px; overflow: hidden; }
+.chat-bg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: .4; }
+.chat { position: relative; display: grid; gap: 10px; align-content: start; min-height: min(34vh, 240px); max-height: min(46vh, 420px); overflow-y: auto; padding: 4px 2px 10px; }
+.chat:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.chat > .hint { justify-self: start; margin: 0; padding: 8px 12px; border-radius: 12px; background: rgba(12, 16, 28, .88); }
+.msg { max-width: 86%; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line); font-size: 13.5px; line-height: 1.55; overflow-wrap: anywhere; }
+.msg p { margin: 0; white-space: pre-wrap; } .msg.me { justify-self: end; background: rgba(31, 29, 29, .93); border-color: rgba(245, 184, 46, .3); }
+.msg.ai, .msg.wait { justify-self: start; background: rgba(19, 23, 35, .93); } .msg .who { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; margin-bottom: 6px; font-size: 12px; }
+.msg .who span { color: var(--mute); font-size: 11.5px; } .msg p.warn { color: var(--gold); } .msg.wait p { color: var(--mute); }
+.chat-side { display: grid; gap: 8px; align-content: end; min-width: 150px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+label.f.flat { margin-bottom: 0; } .hint.sep { margin-top: 8px; }
+.found:empty { margin: 0; }
+/* Dar ekranda yazı kutusu tam genişlik alır; Yön ve Gönder altında yan yana durur. */
+@media (max-width: 560px) { .row .yaz { flex-basis: 100%; } .chat-side { flex: 1 1 100%; grid-template-columns: minmax(0, 1fr) auto; align-items: end; } }
+.mod { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: grid; gap: 6px; text-align: center; pointer-events: none; max-width: calc(100% - 32px); }
+.mod b { font: 300 clamp(26px, 5vw, 46px)/1 var(--sans); letter-spacing: .34em; text-transform: uppercase; padding-left: .34em; overflow-wrap: anywhere; }
+.mod span { font: 500 10px/1.3 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--mute); }
+.mod[hidden] { display: none; }
+
+/* Dock: açılır kapanır; çok sistemde sistem düğmeleri tek satırlık kaydırılabilir şeritte */
+.dock .serit { display: flex; gap: 6px; flex: 1 1 100%; order: -1; max-width: 100%; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; border-radius: 999px; }
+.dock .serit button { flex: none; white-space: nowrap; }
+.dock .katla { color: var(--gold); }
+.dock.kapali { gap: 2px; padding: 4px; }
+@media (max-width: 560px) { .dock .serit { max-width: 100%; } }
+
+/* Hareket: ilk açılışta sistem adı harfleri (tek sefer); hareket azaltma açıksa JS hiç eklemez */
+.hud .hrf { display: inline-block; opacity: 0; transform: translateY(5px); animation: hrf-gel .32s ease-out forwards; }
+@keyframes hrf-gel { to { opacity: 1; transform: none; } }
+.card b, .side div { font-variant-numeric: tabular-nums; }

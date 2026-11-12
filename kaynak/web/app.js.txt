@@ -5,6 +5,7 @@ import { t, tp, dil, dilSec, DILLER, DIL_AD, hataCevir, uygula } from '/i18n.js'
 
 const $ = (id) => document.getElementById(id);
 const TOKEN = document.querySelector('meta[name="ozmira-token"]').content;
+try { if (/[?&]ac=/.test(location.search)) history.replaceState(null, '', location.pathname); } catch (e) { /* yok say */ }  // tek kullanımlık açılış anahtarı adreste kalmasın
 const stilAd = (k) => (STILLER.includes(k) ? t('stil.' + k) : k);
 const ONAYARLAR = [
   { ad: 'Claude', stil: 'lif', renk: '#ff8a3d' }, { ad: 'ChatGPT', stil: 'galaksi', renk: '#4d8dff' },
@@ -49,16 +50,44 @@ let hesap = { plan: 'ucretsiz', izinli_stiller: ['galaksi', 'kure'], sistem_sini
 async function hesapYukle() { try { hesap = await api('GET', '/api/hesap'); } catch (_) { /* eski değer kalır */ } }
 let sahne = null, durum = null, ornekMi = true, demoAcik = true, dockSig = '', poll = 0;
 
+// ---------- Hareket: kısa sayı sayımı + ilk açılışta ad animasyonu (hareket azaltma açıksa yok) ----------
+const hareketAz = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SAYIM_MS = 400;
+function sayiAnim(el, hedef, yaz) {
+  if (!el) return;
+  const bas = typeof el._v === 'number' ? el._v : 0; el._v = hedef;
+  if (el._raf) cancelAnimationFrame(el._raf); clearTimeout(el._son);
+  if (hareketAz() || bas === hedef || typeof requestAnimationFrame !== 'function') { yaz(hedef); return; }
+  const t0 = performance.now();
+  const adim = () => { const k = Math.max(0, Math.min(1, (performance.now() - t0) / SAYIM_MS)), e = 1 - Math.pow(1 - k, 3); yaz(Math.round(bas + (hedef - bas) * e)); if (k < 1) el._raf = requestAnimationFrame(adim); };
+  el._raf = requestAnimationFrame(adim);
+  el._son = setTimeout(() => { cancelAnimationFrame(el._raf); yaz(hedef); }, SAYIM_MS + 30);   // kare atlanırsa bile 0,43 sn'de doğru değer
+}
+let adAnimHak = false; try { adAnimHak = localStorage.getItem('ozmira-ad-anim') !== '1'; } catch (e) { adAnimHak = false; }
+function adYaz(ad) {   // yalnızca ilk açılışta harfler sırayla oturur; sonra düz metin
+  if (!adAnimHak || hareketAz()) return h('b', { text: ad });
+  const b = h('b', { 'aria-label': ad });
+  [...ad].forEach((c, i) => b.append(h('span', { class: 'hrf', 'aria-hidden': 'true', style: 'animation-delay:' + (i * 35) + 'ms', text: c === ' ' ? '\u00a0' : c })));
+  return b;
+}
+
 // ---------- Panel bileşenleri ----------
 function hudCiz() {
   const hud = $('hud'); hud.replaceChildren();
   durum.sistemler.forEach((s) => {
     const kos = s.ajanlar.filter((a) => a.kosuyor).length;
-    hud.append(h('div', { class: 'r' + (kos ? ' run' : '') }, h('i', { style: 'background:' + s.renk + ';box-shadow:0 0 8px ' + s.renk }), h('b', { text: s.ad }),
+    hud.append(h('div', { class: 'r' + (kos ? ' run' : '') }, h('i', { style: 'background:' + s.renk + ';box-shadow:0 0 8px ' + s.renk }), adYaz(s.ad),
       h('span', { text: tp('hud.ajan', s.ajanlar.length) }), kos ? h('b', { text: t('hud.calisiyor', { n: kos }) }) : null));
   });
+  if (adAnimHak && durum.sistemler.length) { adAnimHak = false; try { localStorage.setItem('ozmira-ad-anim', '1'); } catch (e) { /* yok say */ } }
   const gizli = durum.plan && durum.plan.gizli_ajan;
   if (gizli > 0) hud.append(h('div', { class: 'r' }, h('span', { text: t('hud.gizli', { n: gizli }) })));
+}
+let tokenEl = null;
+function tokenSatiri(toplam) {
+  if (!tokenEl) tokenEl = h('div', {});
+  sayiAnim(tokenEl, toplam, (v) => { tokenEl.textContent = t('side.token', { n: fmt(v) }); });
+  return tokenEl;
 }
 function sideCiz(hata) {
   const side = $('side'); side.replaceChildren();
@@ -68,7 +97,7 @@ function sideCiz(hata) {
   const son = Math.max(0, ...durum.sistemler.map((s) => s.son_etkinlik || 0));
   const gecen = son ? Math.max(0, Math.round(Date.now() / 1000 - son)) : 0;
   const x = gecen < 90 ? t('side.sn', { n: gecen }) : gecen < 5400 ? t('side.dk', { n: Math.round(gecen / 60) }) : t('side.sa', { n: Math.round(gecen / 3600) });
-  side.append(h('div', { class: 'ok', text: t('side.canli') }), h('div', { text: t('side.token', { n: fmt(toplam) }) }),
+  side.append(h('div', { class: 'ok', text: t('side.canli') }), tokenSatiri(toplam),
     h('div', { text: son ? t('side.son', { x }) : t('side.olayYok') }));
 }
 function kartCiz() {
@@ -76,38 +105,66 @@ function kartCiz() {
   if (!a) { card.hidden = true; return; }
   card.hidden = false; $('cn').textContent = a.name; $('cs').textContent = a.sys.ad + ' · ' + stilAd(a.sys.stil);
   $('cd').textContent = a.desc || t('card.aciklamaYok');
-  $('cr').textContent = String(a.runs); $('ct').textContent = fmt(a.tokens); $('ck').textContent = a.running ? t('card.calisiyor') : t('card.bosta');
+  sayiAnim($('cr'), a.runs, (v) => { $('cr').textContent = String(v); }); sayiAnim($('ct'), a.tokens, (v) => { $('ct').textContent = fmt(v); }); $('ck').textContent = a.running ? t('card.calisiyor') : t('card.bosta');
 }
+let dockKapali = false; try { dockKapali = localStorage.getItem('ozmira-dock') === '1'; } catch (e) { /* yok say */ }
 function dockCiz() {
-  const sig = JSON.stringify([ornekMi, durum.sistemler.map((s) => [s.id, s.ad, s.renk]), demoAcik, hesap.plan, dil]);
+  const sig = JSON.stringify([ornekMi, durum.sistemler.map((s) => [s.id, s.ad, s.renk]), demoAcik, hesap.plan, dil, dockKapali]);
   if (sig === dockSig) return; dockSig = sig;
   const dock = $('dock'); dock.replaceChildren();
-  const b = (text, fn, on) => h('button', { type: 'button', class: on ? 'on' : '', text, onclick: fn });
-  dock.append(b(t('dock.hepsi'), () => sahne.focus('hepsi')), b(t('dock.merkez'), () => sahne.focus('merkez')));
-  durum.sistemler.forEach((s) => dock.append(b(s.ad, () => sahne.focus(s.id))));
+  const b = (text, fn, on) => h('button', { type: 'button', class: on ? 'on' : '', 'aria-pressed': on == null ? null : String(!!on), text, onclick: fn });
+  const katla = h('button', { type: 'button', class: 'katla', 'aria-expanded': String(!dockKapali), text: dockKapali ? t('dock.menu') : t('dock.gizle'), onclick: () => { dockKapali = !dockKapali; try { localStorage.setItem('ozmira-dock', dockKapali ? '1' : '0'); } catch (e) { /* yok say */ } dockSig = ''; dockCiz(); const k = $('dock').querySelector('.katla'); if (k) k.focus(); } });
+  dock.classList.toggle('kapali', dockKapali);
+  if (dockKapali) { dock.append(katla, b(t('dock.hepsi'), () => { modGoster(null); sahne.focus('hepsi'); })); return; }
+  dock.append(katla, h('span', { class: 'sep' }), b(t('dock.hepsi'), () => { modGoster(null); sahne.focus('hepsi'); }), b(t('dock.merkez'), () => { modGoster(null); sahne.focus('merkez'); }));
+  const serit = h('span', { class: 'serit' }); durum.sistemler.forEach((s) => serit.append(b(s.ad, () => { modGoster(s); sahne.focus(s.id); }))); dock.append(serit);
   dock.append(h('span', { class: 'sep' }), b(t('dock.demo'), () => { demoAcik = !demoAcik; sahne.demo(demoAcik); dockSig = ''; dockCiz(); }, demoAcik));
   if (!ornekMi) dock.append(b(t('dock.baglan'), baglanPenceresi));
   dock.append(b(ornekMi ? t('dock.kur') : t('dock.duzenle'), () => sihirbaz()));
-  dock.append(h('span', { class: 'sep' }), b(t('dock.panel'), () => yonetimPaneli()), b(t('dock.rehber'), () => rehberPenceresi()));
+  dock.append(h('span', { class: 'sep' }), b(t('dock.sohbet'), () => sohbetPenceresi()), b(t('dock.panel'), () => yonetimPaneli()), b(t('dock.rehber'), () => rehberPenceresi()));
   dock.append(h('span', { class: 'sep' }), b(hesap.plan === 'pro' ? t('dock.pro') : t('dock.ucretsiz'), hesapPenceresi), b(dil.toUpperCase(), dilPenceresi));
+}
+// Pro: bir sisteme odaklanınca adı büyük yazıyla sahnenin altında görünür (sistem modu).
+function modGoster(s) {
+  const m = $('mod'); if (!m) return;
+  if (!s || hesap.plan !== 'pro' || ornekMi) { m.hidden = true; return; }
+  m.replaceChildren(h('b', { text: s.ad, style: 'color:' + s.renk }), h('span', { text: tp('hud.ajan', s.ajanlar.length) + ' · ' + stilAd(s.stil) }));
+  m.hidden = false;
 }
 function hepsiniCiz() { hudCiz(); sideCiz(false); kartCiz(); dockCiz(); }
 
 // ---------- Pencere yardımcıları ----------
 let sonOdak = null, kapaninca = null;
+const ARKA = ['stage', 'hud', 'side', 'card', 'mod', 'dock'];   // pencere açıkken klavye ve ekran okuyucu için kapatılan arka plan
+const ODAK_SEC = 'a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),[tabindex="0"]';
+const odaklar = (kok) => [...kok.querySelectorAll(ODAK_SEC)].filter((e) => e.tabIndex >= 0 && e.getClientRects().length);
+// Aynı data-o değerini taşıyan öğeyi bulur (değer kullanıcı metni içerebilir; seçiciye gömülmez).
+const anahtarli = (kok, k) => (k ? [...kok.querySelectorAll('[data-o]')].find((e) => e.getAttribute('data-o') === k && !e.disabled) : null);
+function arkaPlan(kapali) { ARKA.forEach((id) => { const e = $(id); if (e) e.inert = kapali; }); }
 function kapanisCalistir() { if (kapaninca) { const f = kapaninca; kapaninca = null; f(); } }
 function pencereAc(icerik, genis = false) {
   kapanisCalistir();
-  if ($('modal').hidden) sonOdak = document.activeElement;
-  const m = $('modal'), p = $('panel'); p.classList.toggle('wide', genis); p.replaceChildren(...icerik); m.hidden = false; p.scrollTop = 0;
-  const ilk = p.querySelector('input,select,textarea,button'); if (ilk) ilk.focus();
+  const m = $('modal'), p = $('panel'), a = document.activeElement;
+  if (m.hidden) sonOdak = a;
+  const eski = a && p.contains(a) ? a.getAttribute('data-o') : null;   // pencere yeniden çizilirse odak aynı denetimde kalır
+  p.classList.toggle('wide', genis); p.replaceChildren(...icerik); m.hidden = false; p.scrollTop = 0; arkaPlan(true);
+  const baslik = p.querySelector('h1');
+  if (baslik) { baslik.id = 'pbaslik'; p.setAttribute('aria-labelledby', 'pbaslik'); } else p.removeAttribute('aria-labelledby');
+  const ilk = anahtarli(p, eski) || odaklar(p)[0]; if (ilk) ilk.focus();
 }
-function pencereKapat() { kapanisCalistir(); $('modal').hidden = true; $('panel').replaceChildren(); if (sonOdak && sonOdak.focus) sonOdak.focus(); }
+function pencereKapat() {
+  kapanisCalistir(); $('modal').hidden = true; $('panel').replaceChildren(); arkaPlan(false);
+  const o = sonOdak && sonOdak.isConnected ? sonOdak : $('dock').querySelector('button'); if (o && o.focus) o.focus();
+}
 addEventListener('keydown', (e) => {
   const m = $('modal');
   if (e.key === 'Escape' && !m.hidden) { pencereKapat(); return; }
-  if (e.key === 'Tab' && !m.hidden) { const f = [...$('panel').querySelectorAll('input,select,textarea,button:not([disabled])')]; if (!f.length) return;
-    const ilk = f[0], son = f[f.length - 1]; if (e.shiftKey && document.activeElement === ilk) { e.preventDefault(); son.focus(); } else if (!e.shiftKey && document.activeElement === son) { e.preventDefault(); ilk.focus(); } }
+  if (e.key === 'Tab' && !m.hidden) {
+    const p = $('panel'), f = odaklar(p), a = document.activeElement; if (!f.length) { e.preventDefault(); return; }
+    const ilk = f[0], son = f[f.length - 1];
+    if (!p.contains(a)) { e.preventDefault(); (e.shiftKey ? son : ilk).focus(); }
+    else if (e.shiftKey && a === ilk) { e.preventDefault(); son.focus(); } else if (!e.shiftKey && a === son) { e.preventDefault(); ilk.focus(); }
+  }
 });
 $('modal').addEventListener('pointerdown', (e) => { if (e.target === $('modal')) pencereKapat(); });
 $('cardx').addEventListener('click', () => { sahne.temizleSecim(); kartCiz(); });
@@ -118,7 +175,9 @@ async function kopyala(metin, dugme) {
 
 // ---------- Bağlan: olay bildirme ----------
 function baglanPenceresi() {
-  const s = durum.sistemler[0]; const ajan = (s.ajanlar[0] && s.ajanlar[0].ad) || 'ajan-adi';
+  const s = durum.sistemler[0]; const adHam = (s.ajanlar[0] && s.ajanlar[0].ad) || '';
+  // Kopyalanacak komutlara yalnızca kabuğun (sh, cmd, PowerShell) yorumlayamayacağı adlar girer; diğerlerinde yer tutucu kullanılır.
+  const ajan = /^[\p{L}\p{N}][\p{L}\p{N} ._-]{0,59}$/u.test(adHam) ? adHam : 'ajan-adi';
   const komut = (x) => h('div', { class: 'code' }, h('span', { text: x }), h('button', { class: 'btn small', type: 'button', text: t('c.kopyala'), onclick: (ev) => kopyala(x, ev.currentTarget) }));
   const py = /win/i.test(navigator.platform || '') ? 'py' : 'python3';
   const cli = (o, extra = '') => py + ' ozmira.py olay ' + s.id + ' "' + ajan + '" ' + o + extra;
@@ -208,9 +267,21 @@ function sihirbaz() {
 // ---------- Hesap: plan, lisans, paylaşım ----------
 function hesapPenceresi() {
   let hata = '', bilgi = '';
-  const lisansGiris = h('input', { type: 'text', placeholder: 'OZMIRA1....', autocomplete: 'off', spellcheck: 'false', 'aria-label': t('a.lisansAria') });
-  const izin = h('input', { type: 'checkbox', id: 'izin', checked: hesap.telemetri });
+  const lisansGiris = h('input', { type: 'text', placeholder: 'OZMIRA1....', autocomplete: 'off', spellcheck: 'false', 'aria-label': t('a.lisansAria'), 'data-o': 'lisans' });
+  const izin = h('input', { type: 'checkbox', id: 'izin', checked: hesap.telemetri, 'data-o': 'izin' });
+  const kasaGiris = h('input', { type: 'text', id: 'kasa', maxlength: '500', placeholder: t('a.kasaPh'), autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'kasaipucu', 'data-o': 'kasa' });
+  kasaGiris.value = hesap.kasa || '';
+  // Kalıcı kutular: metin, kutu sayfadayken değişir; ekran okuyucu böylece sonucu duyurur.
+  const hataKutu = h('div', { class: 'err', role: 'alert' }), bilgiKutu = h('div', { class: 'found', role: 'status' });
+  async function kasaKaydet() {
+    try { hesap = await api('PUT', '/api/hesap', { kasa: kasaGiris.value.trim() }); kasaGiris.value = hesap.kasa || ''; bilgi = hesap.kasa ? t('a.kasaKayit', { p: hesap.kasa }) : t('a.kasaKapali'); hata = ''; }
+    catch (e) { hata = e.message; bilgi = ''; }
+    ciz();
+  }
+  kasaGiris.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); kasaKaydet(); } });
   function ciz() {
+    // Giriş kutuları kalıcıdır ve yeni ağaca taşınırken odağı yitirir; odak önce not edilir, çizimden sonra geri verilir.
+    const odakta = document.activeElement, onceki = odakta && $('panel').contains(odakta) ? odakta.getAttribute('data-o') : null;
     const pro = hesap.plan === 'pro';
     const sv = { s: hesap.sistem_siniri, a: hesap.ajan_siniri };
     pencereAc([
@@ -219,22 +290,28 @@ function hesapPenceresi() {
       pro ? null : h('div', { class: 'found' }, hesap.satin_al ? [h('span', { text: t('a.compra') }), h('a', { href: hesap.satin_al, target: '_blank', rel: 'noopener noreferrer', text: hesap.satin_al })] : h('span', { text: t('a.compraYok') })),
       h('h3', { text: t('a.lisansBaslik') }),
       h('div', { class: 'row' }, h('div', { class: 'grow' }, lisansGiris),
-        h('button', { class: 'btn main', type: 'button', text: t('a.etkinlestir'), onclick: async (ev) => {
+        h('button', { class: 'btn main', type: 'button', 'data-o': 'etkin', text: t('a.etkinlestir'), onclick: async (ev) => {
           const v = lisansGiris.value.trim(); if (!v) { hata = t('a.yapistir'); return ciz(); }
           const dugme = ev.currentTarget; dugme.disabled = true;
           try { hesap = await api('PUT', '/api/hesap', { lisans: v }); bilgi = t('a.proAcildi'); hata = ''; dockSig = ''; dockCiz(); }
           catch (e) { hata = e.message; bilgi = ''; dugme.disabled = false; }
           ciz();
         } })),
-      pro ? h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', text: t('a.kaldirBtn'), onclick: async () => { try { hesap = await api('PUT', '/api/hesap', { lisans: '' }); dockSig = ''; dockCiz(); bilgi = t('a.kaldirildi'); hata = ''; } catch (e) { hata = e.message; } ciz(); } })) : null,
+      pro ? h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', text: t('a.kaldirBtn'), onclick: async () => { try { hesap = await api('PUT', '/api/hesap', { lisans: '' }); dockSig = ''; dockCiz(); bilgi = t('a.kaldirildi'); hata = ''; } catch (e) { hata = e.message; bilgi = ''; } ciz(); } })) : null,
       h('h3', { text: t('a.paylasim') }),
       h('label', { class: 'f', for: 'izin' }, h('span', {}, izin, ' ' + t('a.izin'))),
       h('p', { class: 'hint', text: t('a.izinHint') + (hesap.toplayici_var ? '' : t('a.izinYok')) }),
-      h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', text: t('a.izinKaydet'), onclick: async () => { try { hesap = await api('PUT', '/api/hesap', { telemetri: izin.checked }); bilgi = t('a.tercihKayit'); hata = ''; } catch (e) { hata = e.message; } ciz(); } })),
+      h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', 'data-o': 'izinBtn', text: t('a.izinKaydet'), onclick: async () => { try { hesap = await api('PUT', '/api/hesap', { telemetri: izin.checked }); bilgi = t('a.tercihKayit'); hata = ''; } catch (e) { hata = e.message; bilgi = ''; } ciz(); } })),
+      h('h3', { text: t('a.kasaBaslik') }),
+      h('div', { class: 'row' }, h('label', { class: 'f flat grow', for: 'kasa' }, t('a.kasaEtiket'), kasaGiris),
+        h('button', { class: 'btn', type: 'button', 'data-o': 'kasaBtn', text: t('c.kaydet'), onclick: kasaKaydet })),
+      h('p', { class: 'hint sep', id: 'kasaipucu', text: t('a.kasaHint') }),
       h('p', { class: 'hint', text: t('a.veri', { p: hesap.veri_klasoru || '~/.ozmira', v: hesap.surum }) }),
-      h('div', { class: 'err', role: 'alert', text: hata }), bilgi ? h('div', { class: 'found', role: 'status', text: bilgi }) : null,
+      hataKutu, bilgiKutu,
       h('div', { class: 'foot' }, h('button', { class: 'btn', type: 'button', text: t('a.geriBildirim'), onclick: geriBildirimPenceresi }), h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
     ].filter(Boolean));
+    const geri = anahtarli($('panel'), onceki); if (geri) geri.focus();
+    hataKutu.textContent = hata; bilgiKutu.textContent = bilgi;
   }
   ciz();
 }
@@ -265,6 +342,117 @@ function dilPenceresi() {
   ]);
 }
 
+// ---------- Sohbet arka planı: yalnızca yazı karakterleriyle çizilen kara delik ----------
+// Ortada boş karanlık disk, çevresinde parlak harf halkası, eğik ve yavaş dönen bir birikim diski. Süs olduğu için aria-hidden bir tuvale çizilir.
+// Dönen değer çizimi durdurur. Hareket azaltma tercihinde tek durağan kare çizilir; sekme gizliyken çizim yapılmaz.
+function karaDelik(tuval) {
+  const c = tuval.getContext && tuval.getContext('2d'); if (!c) return () => {};
+  const HALKA = 'OZMIRA', TOZ = '.,:;~+=*xo08#', EN = 7, BOY = 12, ALTIN = '#f3b84b', BEYAZ = '#fff2d8', EGIM = 0.24, CA = Math.cos(-0.16), SA = Math.sin(-0.16);
+  const sabit = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w = 0, yuk = 0, kare = 0, son = -1e9, bitti = false;
+  function olc() {
+    const r = tuval.getBoundingClientRect(), o = Math.min(2, window.devicePixelRatio || 1); w = Math.round(r.width); yuk = Math.round(r.height);
+    tuval.width = Math.max(1, Math.round(w * o)); tuval.height = Math.max(1, Math.round(yuk * o));
+    c.setTransform(o, 0, 0, o, 0, 0); c.font = '11px ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  }
+  function ciz(z) {
+    c.clearRect(0, 0, w, yuk); if (w < 80 || yuk < 80) return;
+    const cx = w / 2, cy = yuk / 2, r0 = Math.min(yuk * 0.27, w * 0.135), ic = r0 * 1.55, dis = r0 * 3.6, halka = r0 + Math.max(BOY * 1.5, r0 * 0.24);
+    const i0 = Math.max(0, Math.floor((cx - dis) / EN)), i1 = Math.min(Math.ceil(w / EN), Math.ceil((cx + dis) / EN));
+    for (let j = 0; j * BOY < yuk; j++) for (let i = i0; i < i1; i++) {
+      const px = i * EN + EN / 2, py = j * BOY + BOY / 2, dx = px - cx, dy = py - cy, r = Math.hypot(dx, dy);
+      const u = dx * CA - dy * SA, v = (dx * SA + dy * CA) / EGIM, ro = Math.hypot(u, v);   // eğik diskin kendi düzlemindeki konum
+      let p = 0, kr = '', renk = ALTIN;
+      if (ro > ic && ro < dis && (r > halka || v > 0)) {   // disk: arka yarısı deliğin ardında kalır, ön yarısı önünden geçer
+        const fi = Math.atan2(v, u), hiz = 0.45 * Math.pow(ic / ro, 1.5);
+        p = Math.pow(1 - (ro - ic) / (dis - ic), 1.1) * (0.5 + 0.5 * (0.5 + 0.5 * Math.sin(3 * (fi - hiz * z) + ro * 0.07))) * (1 - 0.18 * Math.cos(fi));
+        if (p < 0.14 && (i * 7 + j * 13) % 3) p = 0;   // dış kenar seyrekleşerek söner
+        kr = TOZ[Math.min(TOZ.length - 1, Math.floor(p * TOZ.length))]; if (p > 0.62) renk = BEYAZ;
+      }
+      if (p < 0.14 && r >= r0 && r <= halka) {             // ışık halkası: marka harfleri, yavaşça döner
+        const n = HALKA.length * 5, sira = Math.floor(((Math.atan2(dy, dx) / (2 * Math.PI) + 1 + z * 0.012) % 1) * n);
+        kr = HALKA[sira % HALKA.length]; p = 0.8 + 0.2 * Math.sin(z * 0.9 + sira); renk = BEYAZ;
+      }
+      if (p <= 0.04 || !kr) continue;
+      c.globalAlpha = Math.min(1, p); c.fillStyle = renk; c.fillText(kr, px, py);
+    }
+    c.globalAlpha = 1;
+  }
+  function durdur() { bitti = true; cancelAnimationFrame(kare); if (gozcu) gozcu.disconnect(); }
+  function adim(ts) {
+    if (bitti) return; if (!tuval.isConnected) { durdur(); return; }
+    kare = requestAnimationFrame(adim);
+    if (document.hidden || ts - son < 80) return;        // en çok saniyede 12 kare
+    son = ts; ciz(ts / 1000);
+  }
+  const gozcu = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { if (!bitti) { olc(); ciz(sabit ? 6 : performance.now() / 1000); } }) : null;
+  if (gozcu) gozcu.observe(tuval); else { olc(); ciz(6); }
+  if (!sabit) kare = requestAnimationFrame(adim);
+  return durdur;
+}
+
+// ---------- Ortak sohbet: OZMIRA mesajı konusuna göre doğru yapay zekâya yollar ----------
+let sohbetAkisi = [];
+function sohbetPenceresi() {
+  let bilgi = null, hata = '', mesgul = false, bekleyen = '', hedef = '', proje = '', yeniProjeler = [];
+  const projeSel = h('select'); projeSel.addEventListener('change', () => { proje = projeSel.value; yenile(); });
+  const projeInp = h('input', { type: 'text', maxlength: '40', placeholder: t('s.yeniProje'), 'aria-label': t('s.yeniProje'), autocomplete: 'off' });
+  const projeAc = () => { const ad = projeInp.value.trim(); if (!ad) return; if (!yeniProjeler.includes(ad)) yeniProjeler.push(ad); proje = ad; projeInp.value = ''; yenile(); metin.focus(); };
+  projeInp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); projeAc(); } });
+  // Liste her güncellemede baştan çizilir; ekran okuyucu yalnızca son yanıtı duysun diye duyuru ayrı bir kutudan yapılır.
+  const liste = h('div', { class: 'chat', role: 'log', 'aria-live': 'off', 'aria-label': t('s.liste'), tabindex: '0' });
+  const duyuru = h('div', { class: 'sr-only', role: 'status' });
+  const tuval = h('canvas', { class: 'chat-bg', 'aria-hidden': 'true' });
+  const alt = h('div', { class: 'hint' }), hataKutu = h('div', { class: 'err', role: 'alert' });
+  const metin = h('textarea', { rows: '3', maxlength: '4000', placeholder: t('s.ph'), 'aria-label': t('s.ph') });
+  const hedefSel = h('select'); hedefSel.addEventListener('change', () => { hedef = hedefSel.value; });
+  const gonder = h('button', { class: 'btn main', type: 'button', text: t('c.gonder') });
+  const neden = (k) => (k.calisti ? '' : k.neden === 'arac_yok' ? t('s.aracYok', { ad: k.ad }) : k.neden === 'zaman_asimi' ? t('s.zaman') : t('s.aracHata', { ad: k.ad }) + (k.yanit ? ' ' + k.yanit : ''));
+  const benim = (m) => h('div', { class: 'msg me' }, h('span', { class: 'sr-only', text: t('s.sen') }), h('p', { text: m }));
+  function listeCiz() {
+    const sakli = bilgi && (proje || bilgi.plan === 'pro');
+    const kayitlar = (sakli ? bilgi.gecmis.map((k) => { const s = (bilgi.sistemler.find((x) => x.id === k.sistem) || {}); return { ...k, ad: s.ad || k.sistem, renk: s.renk || '#8a93a6', alan: s.alan || '' }; }) : sohbetAkisi);
+    const dugumler = kayitlar.flatMap((k) => [
+      benim(k.metin),
+      h('div', { class: 'msg ai' }, h('div', { class: 'who' }, h('i', { class: 'dot', style: 'background:' + k.renk }), h('b', { text: k.ad }),
+        h('span', { text: k.elle ? t('s.elle') : k.belirsiz ? t('s.belirsiz') : t('s.neden', { alan: k.alan, soz: (k.sozler || []).join(', ') }) })),
+        h('p', { class: k.calisti ? '' : 'warn', text: k.calisti ? k.yanit : neden(k) }))]);
+    if (bekleyen) dugumler.push(benim(bekleyen), h('div', { class: 'msg wait' }, h('p', { text: t('s.bekle') })));   // yanıt gelene kadar mesaj görünür kalır
+    if (!dugumler.length) dugumler.push(h('p', { class: 'hint', text: t('s.bos') }));
+    liste.replaceChildren(...dugumler);
+    liste.scrollTop = liste.scrollHeight;
+  }
+  function altCiz() {
+    if (!bilgi) { alt.textContent = ''; return; }
+    const adlar = [...new Set([...bilgi.projeler.map((x) => x.ad), ...yeniProjeler])];
+    projeSel.replaceChildren(h('option', { value: '', text: t('s.genel') }), ...adlar.map((ad) => h('option', { value: ad, text: ad, selected: ad === proje })));
+    hedefSel.replaceChildren(h('option', { value: '', text: t('s.otomatik') }), ...bilgi.sistemler.map((s) => h('option', { value: s.id, text: s.ad + (s.arac ? '' : ' · ' + t('s.yok')), selected: s.id === hedef })));
+    alt.textContent = bilgi.lan ? t('s.lan') : (bilgi.gunluk_sinir != null ? t('s.sinir', { n: bilgi.bugun, m: bilgi.gunluk_sinir }) : t('s.pro')) + (bilgi.kasa ? ' ' + t('s.kasaAcik') : '');
+    gonder.disabled = mesgul || bilgi.lan; gonder.textContent = mesgul ? t('s.bekle') : t('c.gonder');
+  }
+  async function yenile() { try { bilgi = await api('GET', '/api/sohbet' + (proje ? '?proje=' + encodeURIComponent(proje) : '')); } catch (e) { hata = e.message; } hataKutu.textContent = hata; altCiz(); listeCiz(); }
+  async function yolla() {
+    const m = metin.value.trim(); if (!m || mesgul || gonder.disabled) return;
+    mesgul = true; bekleyen = m; metin.value = ''; hata = ''; hataKutu.textContent = ''; duyuru.textContent = t('s.bekle'); liste.setAttribute('aria-busy', 'true'); altCiz(); listeCiz();
+    let k = null;
+    try { k = await api('POST', '/api/sohbet', { metin: m, dil, ...(hedef ? { hedef } : {}), ...(proje ? { proje } : {}) }); if (!proje) sohbetAkisi.push(k); if (k.kasa_hata) hata = t('s.kasaHata'); }
+    catch (e) { hata = e.message; metin.value = m; }   // gönderilemeyen metin kutuda kalır
+    mesgul = false; bekleyen = ''; liste.removeAttribute('aria-busy'); await yenile();
+    duyuru.textContent = k ? k.ad + ': ' + (k.calisti ? String(k.yanit).slice(0, 400) : neden(k)) : '';
+    metin.focus();
+  }
+  gonder.addEventListener('click', yolla);
+  metin.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); yolla(); } });
+  pencereAc([
+    h('h1', { text: t('s.baslik') }), h('p', { class: 'lead', text: ornekMi ? t('s.ornek') : t('s.lead') }),
+    h('div', { class: 'row tools ends' }, h('label', { class: 'f flat' }, t('s.proje'), projeSel), h('div', { class: 'grow' }, projeInp), h('button', { class: 'btn small', type: 'button', text: t('s.projeAc'), onclick: projeAc })),
+    h('div', { class: 'chat-wrap' }, tuval, liste, duyuru), h('div', { class: 'row tools ends' }, h('div', { class: 'grow yaz' }, metin), h('div', { class: 'chat-side' }, h('label', { class: 'f flat' }, t('s.yon'), hedefSel), gonder)), alt, hataKutu,
+    h('div', { class: 'foot' }, h('span'), h('button', { class: 'btn', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
+  ], true);
+  kapaninca = karaDelik(tuval);
+  metin.focus(); listeCiz(); if (!ornekMi) yenile(); else { gonder.disabled = true; }
+}
+
 // ---------- Yönetim paneli: özet, ajanlar, olaylar ----------
 function onceMetin(t0) {
   if (!t0) return t('p.hic');
@@ -275,9 +463,20 @@ function onceMetin(t0) {
 function yonetimPaneli(sekme0) {
   let sekme = sekme0 || 'ozet', ara = '', sisF = '', yalnizCalisan = false, sira = { k: 'son', yon: -1 }, mesaj = '';
   let pv = { olaylar: [], gunluk: [], olay_toplam: 0 };
-  const govde = h('div', { class: 'pn-body' });
-  const sekmeCubugu = h('div', { class: 'tabs', role: 'tablist' });
+  const SEKMELER = [['ozet', 'p.t.ozet'], ['ajanlar', 'p.t.ajanlar'], ['akis', 'p.t.akis'], ['olaylar', 'p.t.olaylar']];
+  const govde = h('div', { class: 'pn-body', role: 'tabpanel', id: 'pn-govde' });
+  const sekmeCubugu = h('div', { class: 'tabs', role: 'tablist', 'aria-label': t('p.baslik') });
   const durumSatiri = h('div', { class: 'found', role: 'status' });
+  // Panel 3 saniyede bir tazelenir. Veri değişmediyse tabloya dokunulmaz; değiştiyse odak aynı düğmede kalır.
+  // Böylece klavyeyle gezen ya da ekran okuyucuyla okuyan kişi her tazelemede yerini kaybetmez.
+  const imzalar = new Map();
+  function yerlestir(kutu, imza, uret) {
+    if (imzalar.get(kutu) === imza && kutu.firstChild) return;
+    imzalar.set(kutu, imza);
+    const a = document.activeElement, k = a && kutu.contains(a) ? a.getAttribute('data-o') : null;
+    kutu.replaceChildren(...[uret()].flat().filter((x) => x != null));
+    const y = anahtarli(kutu, k); if (y) y.focus();
+  }
   const araInp = h('input', { type: 'search', placeholder: t('p.ara'), 'aria-label': t('p.ara'), autocomplete: 'off', spellcheck: 'false' });
   araInp.addEventListener('input', () => { ara = araInp.value.trim().toLowerCase(); ajanTablosu(); });
   const sisSel = h('select', { 'aria-label': t('p.sistemSuz') });
@@ -297,7 +496,8 @@ function yonetimPaneli(sekme0) {
         i.addEventListener('input', () => { f[k] = i.value.trim(); fiyatYaz(); akisCiz(); }); return h('label', { class: 'f' }, ad, i); };
       return h('div', { class: 'price' }, h('div', {}, h('i', { class: 'dot', style: 'background:' + s.renk }), h('b', { text: s.ad })), alan('g', t('p.f.girdi')), alan('c', t('p.f.cikti'))); }));
   }
-  function akisCiz() {
+  function akisCiz() { yerlestir(akisKutu, JSON.stringify([durum.sistemler, fiyat]), akisUret); }
+  function akisUret() {
     const S = durum.sistemler.map((s) => { const g = (s.token && s.token.girdi) || 0, c = (s.token && s.token.cikti) || 0, top = (s.token && s.token.toplam) || 0; return { s, g, c, top, ayrimsiz: Math.max(0, top - g - c) }; });
     const TG = S.reduce((n, x) => n + x.g, 0), TC = S.reduce((n, x) => n + x.c, 0), TA = S.reduce((n, x) => n + x.ayrimsiz, 0), enb = Math.max(1, ...S.map((x) => Math.max(x.g, x.c)));
     const yuzde = (v) => Math.max(v > 0 ? 2 : 0, Math.round((v / enb) * 100));
@@ -314,19 +514,28 @@ function yonetimPaneli(sekme0) {
       x.s.ajanlar.filter((a) => (a.token || 0) > 0).sort((p, q) => (q.token || 0) - (p.token || 0)).forEach((a) => govdeSatir.push(satir(a.ad, '', a.girdi || 0, a.cikti || 0, a.token || 0, maliyet(x.s.id, a.girdi || 0, a.cikti || 0), false))); });
     const tablo = h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, [t('p.a.kaynak'), t('p.a.girdi'), t('p.a.cikti'), t('p.a.toplam'), t('p.a.oran'), t('p.a.maliyet')].map((x, i) => h('th', { scope: 'col', class: i ? 'num' : '', text: x })))),
       h('tbody', {}, govdeSatir), h('tfoot', {}, satir(t('p.a.hepsi'), '', TG, TC, S.reduce((n, x) => n + x.top, 0), TM, true)));
-    akisKutu.replaceChildren(
-      TG + TC > 0 ? akis : h('p', { class: 'hint', text: t('p.a.bos') }),
+    return [TG + TC > 0 ? akis : h('p', { class: 'hint', text: t('p.a.bos') }),
       TA > 0 ? h('p', { class: 'hint', text: t('p.a.ayrimsiz', { n: fmt(TA) }) }) : null,
-      h('h3', { text: t('p.a.veri') }), h('div', { class: 'tbl-wrap' }, tablo));
+      h('h3', { text: t('p.a.veri') }), h('div', { class: 'tbl-wrap' }, tablo)];
   }
   const satirlar = () => durum.sistemler.flatMap((s) => s.ajanlar.map((a) => ({ s, a })));
 
-  function sekmeleriCiz() {
-    sekmeCubugu.replaceChildren(...[['ozet', 'p.t.ozet'], ['ajanlar', 'p.t.ajanlar'], ['akis', 'p.t.akis'], ['olaylar', 'p.t.olaylar']].map(([k, ad]) =>
-      h('button', { type: 'button', role: 'tab', class: 'tab' + (k === sekme ? ' on' : ''), 'aria-selected': k === sekme ? 'true' : 'false', text: t(ad), onclick: () => { sekme = k; sekmeleriCiz(); govdeCiz(); } })));
+  // Sekmeler: Tab seçili sekmeye gelir, sol/sağ ok ile Home/End sekme değiştirir; odak seçilen sekmede kalır.
+  function sekmeleriCiz(odakla) {
+    sekmeCubugu.replaceChildren(...SEKMELER.map(([k, ad]) =>
+      h('button', { type: 'button', role: 'tab', id: 'pt-' + k, class: 'tab' + (k === sekme ? ' on' : ''), 'aria-selected': k === sekme ? 'true' : 'false', 'aria-controls': 'pn-govde', tabindex: k === sekme ? '0' : '-1', text: t(ad), onclick: () => sekmeSec(k) })));
+    govde.setAttribute('aria-labelledby', 'pt-' + sekme);
+    if (odakla) sekmeCubugu.querySelector('.tab.on').focus();
   }
+  function sekmeSec(k) { sekme = k; sekmeleriCiz(true); govdeCiz(); }
+  sekmeCubugu.addEventListener('keydown', (e) => {
+    const i = SEKMELER.findIndex((x) => x[0] === sekme), n = SEKMELER.length;
+    const j = e.key === 'ArrowRight' ? (i + 1) % n : e.key === 'ArrowLeft' ? (i + n - 1) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
+    if (j < 0) return; e.preventDefault(); sekmeSec(SEKMELER[j][0]);
+  });
   function kutu(etiket, deger, alt) { return h('div', { class: 'kpi' }, h('span', { text: etiket }), h('b', { text: deger }), alt ? h('small', { text: alt }) : null); }
-  function ozetCiz() {
+  function ozetCiz() { yerlestir(ozetKutu, JSON.stringify([durum.sistemler, pv.gunluk, hesap.plan, hesap.sistem_siniri, hesap.ajan_siniri, ornekMi, durum.sistemler.map((s) => onceMetin(s.son_etkinlik))]), ozetUret); }
+  function ozetUret() {
     const liste = satirlar(), kos = liste.filter((x) => x.a.kosuyor).length;
     const toplam = durum.sistemler.reduce((n, s) => n + ((s.token && s.token.toplam) || 0), 0);
     const bugun = pv.gunluk.length ? pv.gunluk[pv.gunluk.length - 1] : { is: 0, token: 0 };
@@ -346,43 +555,48 @@ function yonetimPaneli(sekme0) {
         h('td', {}, h('i', { class: 'dot', style: 'background:' + s.renk }), h('b', { text: s.ad })),
         h('td', { class: 'num', text: String(s.ajanlar.length) }), h('td', { class: 'num', text: String(s.ajanlar.filter((a) => a.kosuyor).length) }),
         h('td', { class: 'num', text: fmt((s.token && s.token.toplam) || 0) }), h('td', { text: onceMetin(s.son_etkinlik) }),
-        h('td', {}, h('button', { class: 'btn small', type: 'button', text: t('p.odak'), onclick: () => { pencereKapat(); sahne.focus(s.id); } }))))));
-    ozetKutu.replaceChildren(kpiler,
+        h('td', {}, h('button', { class: 'btn small', type: 'button', 'data-o': 'od:' + s.id, 'aria-label': t('p.odak') + ': ' + s.ad, text: t('p.odak'), onclick: () => { pencereKapat(); sahne.focus(s.id); } }))))));
+    return [kpiler,
       h('h3', { text: t('p.hafta') }), ornekMi || !hIs ? h('p', { class: 'hint', text: t('p.haftaBos') }) : h('div', {}, cubuklar, h('p', { class: 'hint', text: t('p.haftaAlt', { i: hIs, t: fmt(hTok) }) })),
       h('h3', { text: t('p.sistemler') }), h('div', { class: 'tbl-wrap' }, sistemTablo),
-      h('p', { class: 'hint', text: pro ? t('p.planPro') : t('p.plan', { s: hesap.sistem_siniri, su: durum.sistemler.length, a: hesap.ajan_siniri, au: liste.length }) }));
+      h('p', { class: 'hint', text: pro ? t('p.planPro') : t('p.plan', { s: hesap.sistem_siniri, su: durum.sistemler.length, a: hesap.ajan_siniri, au: liste.length }) })];
   }
   async function olayGonder(s, a) {
     const olay = a.kosuyor ? 'bitti' : 'basla';
     try { await api('POST', '/api/olay', { sistem: s.id, ajan: a.ad, olay }); mesaj = t('p.gonderildi', { a: a.ad, o: t('p.o.' + olay) }); }
     catch (e) { mesaj = e.message; }
+    imzalar.delete(tabloKutu);   // istek başarısız olsa da düğme yeniden etkinleşsin
     await tazele();
   }
   function ajanTablosu() {
     const al = { ad: (x) => x.a.ad.toLowerCase(), sistem: (x) => x.s.ad.toLowerCase(), durum: (x) => (x.a.kosuyor ? 1 : 0), calisma: (x) => x.a.calisma || 0, token: (x) => x.a.token || 0, son: (x) => x.a.son || 0 }[sira.k];
     let liste = satirlar().filter((x) => (!sisF || x.s.id === sisF) && (!yalnizCalisan || x.a.kosuyor) && (!ara || x.a.ad.toLowerCase().includes(ara) || (x.a.aciklama || '').toLowerCase().includes(ara)));
     liste.sort((p, q) => { const u = al(p), v = al(q); return (u < v ? -1 : u > v ? 1 : 0) * sira.yon; });
+    yerlestir(tabloKutu, JSON.stringify([liste.map(({ s, a }) => [s.id, s.ad, s.renk, a, onceMetin(a.son)]), sira, ornekMi]), () => ajanUret(liste));
+  }
+  function ajanUret(liste) {
     const bas = (k, ad, sayi) => h('th', { scope: 'col', class: sayi ? 'num' : '', 'aria-sort': sira.k === k ? (sira.yon > 0 ? 'ascending' : 'descending') : 'none' },
-      h('button', { type: 'button', class: 'th', 'aria-label': t('p.sirala', { x: ad }), text: ad + (sira.k === k ? (sira.yon > 0 ? ' ▲' : ' ▼') : ''), onclick: () => { sira = { k, yon: sira.k === k ? -sira.yon : (sayi ? -1 : 1) }; ajanTablosu(); } }));
-    if (!liste.length) { tabloKutu.replaceChildren(h('p', { class: 'hint', text: t('p.sonucYok') })); return; }
-    tabloKutu.replaceChildren(h('table', { class: 'tbl' },
+      h('button', { type: 'button', class: 'th', 'data-o': 'th:' + k, 'aria-label': t('p.sirala', { x: ad }), text: ad + (sira.k === k ? (sira.yon > 0 ? ' ▲' : ' ▼') : ''), onclick: () => { sira = { k, yon: sira.k === k ? -sira.yon : (sayi ? -1 : 1) }; ajanTablosu(); } }));
+    if (!liste.length) return h('p', { class: 'hint', role: 'status', text: t('p.sonucYok') });
+    return h('table', { class: 'tbl' },
       h('thead', {}, h('tr', {}, bas('ad', t('p.c.ajan')), bas('sistem', t('p.c.sistem')), bas('durum', t('card.durum')), bas('calisma', t('card.calisma'), true), bas('token', t('card.token'), true), bas('son', t('p.c.son')), h('th', { scope: 'col', text: t('p.c.eylem') }))),
       h('tbody', {}, liste.map(({ s, a }) => h('tr', {},
         h('td', {}, h('b', { text: a.ad }), a.aciklama ? h('small', { text: a.aciklama }) : null),
         h('td', {}, h('i', { class: 'dot', style: 'background:' + s.renk }), s.ad),
         h('td', {}, h('span', { class: 'pill' + (a.kosuyor ? ' run' : ''), text: a.kosuyor ? t('card.calisiyor') : t('card.bosta') })),
         h('td', { class: 'num', text: String(a.calisma || 0) }), h('td', { class: 'num', text: fmt(a.token || 0) }), h('td', { text: onceMetin(a.son) }),
-        h('td', {}, h('button', { class: 'btn small', type: 'button', disabled: ornekMi, text: a.kosuyor ? t('p.bitir') : t('p.baslat'), onclick: (ev) => { ev.currentTarget.disabled = true; olayGonder(s, a); } })))))));
+        h('td', {}, h('button', { class: 'btn small', type: 'button', disabled: ornekMi, 'data-o': 'ey:' + s.id + ':' + a.ad, 'aria-label': (a.kosuyor ? t('p.bitir') : t('p.baslat')) + ': ' + a.ad, text: a.kosuyor ? t('p.bitir') : t('p.baslat'), onclick: (ev) => { ev.currentTarget.disabled = true; olayGonder(s, a); } }))))));
   }
-  function olaylariCiz() {
-    if (!pv.olaylar.length) { olayKutu.replaceChildren(h('p', { class: 'hint', text: t('p.olayYok') })); return; }
+  function olaylariCiz() { yerlestir(olayKutu, JSON.stringify([pv.olaylar, pv.olay_toplam, durum.sistemler.map((s) => [s.id, s.ad, s.renk])]), olayUret); }
+  function olayUret() {
+    if (!pv.olaylar.length) return h('p', { class: 'hint', text: t('p.olayYok') });
     const sAd = Object.fromEntries(durum.sistemler.map((s) => [s.id, s]));
     const saat = (x) => new Date(x * 1000).toLocaleString(dil, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    olayKutu.replaceChildren(h('p', { class: 'hint', text: t('p.olaySay', { n: pv.olaylar.length, m: pv.olay_toplam }) }), h('table', { class: 'tbl' },
+    return [h('p', { class: 'hint', text: t('p.olaySay', { n: pv.olaylar.length, m: pv.olay_toplam }) }), h('table', { class: 'tbl' },
       h('thead', {}, h('tr', {}, [t('p.c.zaman'), t('p.c.sistem'), t('p.c.ajan'), t('p.c.olay'), t('card.token')].map((x, i) => h('th', { scope: 'col', class: i === 4 ? 'num' : '', text: x })))),
       h('tbody', {}, pv.olaylar.map((e) => { const s = sAd[e.sistem]; return h('tr', {},
         h('td', { text: saat(e.t) }), h('td', {}, s ? h('i', { class: 'dot', style: 'background:' + s.renk }) : null, s ? s.ad : e.sistem), h('td', {}, h('b', { text: e.ajan }), e.is ? h('small', { text: e.is }) : null),
-        h('td', {}, h('span', { class: 'pill' + (e.olay === 'basla' ? ' run' : ''), text: t('p.o.' + (e.olay === 'basla' ? 'basla' : 'bitti')) })), h('td', { class: 'num', text: e.token != null ? fmt(e.token) : '' })); }))));
+        h('td', {}, h('span', { class: 'pill' + (e.olay === 'basla' ? ' run' : ''), text: t('p.o.' + (e.olay === 'basla' ? 'basla' : 'bitti')) })), h('td', { class: 'num', text: e.token != null ? fmt(e.token) : '' })); })))];
   }
   function govdeCiz() {
     if (sekme === 'ozet') { govde.replaceChildren(ozetKutu); ozetCiz(); }
@@ -395,7 +609,7 @@ function yonetimPaneli(sekme0) {
     } else { govde.replaceChildren(olayKutu); olaylariCiz(); }
   }
   function guncelle() {
-    durumSatiri.textContent = mesaj; durumSatiri.hidden = !mesaj;
+    if (durumSatiri.textContent !== mesaj) durumSatiri.textContent = mesaj;
     if (sekme === 'ozet') ozetCiz(); else if (sekme === 'ajanlar') ajanTablosu(); else if (sekme === 'akis') akisCiz(); else olaylariCiz();
   }
   async function tazele() {
@@ -404,7 +618,7 @@ function yonetimPaneli(sekme0) {
     guncelle();
   }
   function csvIndir() {
-    const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const q = (v) => { let x = String(v == null ? '' : v); if (typeof v === 'string' && /^[=+\-@\t\r]/.test(x)) x = "'" + x; return '"' + x.replace(/"/g, '""') + '"'; };  // tablo programında formül olarak çalışmasın
     const sat = [['system', 'agent', 'description', 'status', 'runs', 'tokens', 'last_activity_utc', 'input_tokens', 'output_tokens'].map(q).join(',')].concat(satirlar().map(({ s, a }) =>
       [s.ad, a.ad, a.aciklama || '', a.kosuyor ? 'running' : 'idle', a.calisma || 0, a.token || 0, a.son ? new Date(a.son * 1000).toISOString() : '', a.girdi || 0, a.cikti || 0].map(q).join(',')));
     const url = URL.createObjectURL(new Blob(['﻿' + sat.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
@@ -418,16 +632,19 @@ function yonetimPaneli(sekme0) {
       h('button', { class: 'btn', type: 'button', text: ornekMi ? t('dock.kur') : t('dock.duzenle'), onclick: () => sihirbaz() })),
       h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
   ], true);
-  durumSatiri.hidden = true;
   const tm = setInterval(() => { if (!document.hidden) tazele(); }, 3000);
   kapaninca = () => clearInterval(tm);
   tazele();
 }
 
 // ---------- Rehber: adım adım kurulum ve ileri konular ----------
+// k, dersin kalıcı kimliğidir (metin anahtarı r.<k>.b / r.<k>.g ve tarayıcıda saklanan ilerleme). Ekranda görünen numara dizideki sıradır;
+// böylece araya ders eklenince (11: ortak sohbet, temel dersler arasında) numaralar 1'den 12'ye sırayla gider ve eski ilerleme bozulmaz.
 const DERSLER = [
   { k: 1 }, { k: 2, eylem: () => sihirbaz() }, { k: 3, eylem: () => sihirbaz() }, { k: 4, eylem: () => baglanPenceresi(), gercek: true }, { k: 5, eylem: () => yonetimPaneli('ajanlar') },
+  { k: 11, eylem: () => sohbetPenceresi() },
   { k: 6, ileri: true, eylem: () => baglanPenceresi(), gercek: true }, { k: 7, ileri: true }, { k: 8, ileri: true }, { k: 9, ileri: true }, { k: 10, ileri: true, eylem: () => hesapPenceresi() },
+  { k: 12, ileri: true, eylem: () => hesapPenceresi() },
 ];
 function rehberOku() { try { return new Set(JSON.parse(localStorage.getItem('ozmira-rehber') || '[]')); } catch (_) { return new Set(); } }
 function rehberYaz(s) { try { localStorage.setItem('ozmira-rehber', JSON.stringify([...s])); } catch (_) { /* depolama yoksa ilerleme bu oturumda kalır */ } }
@@ -437,10 +654,13 @@ function rehberPenceresi(ilk) {
   let secili = ilk || (DERSLER.find((d) => !biten.has(d.k)) || DERSLER[0]).k;
   const py = /win/i.test(navigator.platform || '') ? 'py' : 'python3';
   const degisken = { py, p: hesap.veri_klasoru || '~/.ozmira', s: hesap.sistem_siniri, a: hesap.ajan_siniri };
-  function ciz() {
+  // odak: 'ders' ise yeni dersin başlığına gider (ekran okuyucu başlığı okur, dar ekranda ders görünür yere kayar);
+  // 'sonraki' ise Sonraki düğmesinde kalır. Verilmezse pencere ilk kez açılıyordur.
+  function ciz(odak) {
     const d = DERSLER.find((x) => x.k === secili), sira = DERSLER.indexOf(d);
     const grup = (ileri) => DERSLER.filter((x) => !!x.ileri === ileri).map((x) => h('button', { type: 'button', class: 'les' + (x.k === secili ? ' on' : '') + (biten.has(x.k) ? ' done' : ''), 'aria-current': x.k === secili ? 'true' : 'false',
-      onclick: () => { secili = x.k; ciz(); } }, h('i', { text: biten.has(x.k) ? '✓' : String(x.k) }), h('span', { text: t('r.' + x.k + '.b') })));
+      onclick: () => { secili = x.k; ciz('ders'); } }, h('i', { text: biten.has(x.k) ? '✓' : String(DERSLER.indexOf(x) + 1) }), h('span', { text: t('r.' + x.k + '.b') }),
+      biten.has(x.k) ? h('span', { class: 'sr-only', text: ' (' + t('r.tamam') + ')' }) : null));
     const paragraflar = t('r.' + d.k + '.g', degisken).split('|').map((x) => x.startsWith('$ ')
       ? h('div', { class: 'code' }, h('span', { text: x.slice(2) }), h('button', { class: 'btn small', type: 'button', text: t('c.kopyala'), onclick: (ev) => kopyala(x.slice(2), ev.currentTarget) }))
       : h('p', { text: x }));
@@ -449,13 +669,15 @@ function rehberPenceresi(ilk) {
       h('h1', { text: t('r.baslik') }), h('p', { class: 'lead', text: t('r.lead') + ' ' + t('r.ilerleme', { n: biten.size, m: DERSLER.length }) }),
       h('div', { class: 'guide' },
         h('nav', { 'aria-label': t('r.dersler') }, h('h3', { text: t('r.temel') }), grup(false), h('h3', { text: t('r.ileri') }), grup(true)),
-        h('article', {}, h('h2', { text: d.k + '. ' + t('r.' + d.k + '.b') }), paragraflar,
+        h('article', {}, h('h2', { tabindex: '-1', text: (sira + 1) + '. ' + t('r.' + d.k + '.b') }), paragraflar,
           h('div', { class: 'row' },
             denenebilir ? h('button', { class: 'btn main', type: 'button', text: t('r.dene'), onclick: () => { biten.add(d.k); rehberYaz(biten); d.eylem(); } }) : null,
-            h('button', { class: 'btn', type: 'button', text: biten.has(d.k) ? t('r.tamam') : t('r.isaretle'), disabled: biten.has(d.k), onclick: () => { biten.add(d.k); rehberYaz(biten); ciz(); } }),
-            sira < DERSLER.length - 1 ? h('button', { class: 'btn', type: 'button', text: t('r.sonraki'), onclick: () => { biten.add(d.k); rehberYaz(biten); secili = DERSLER[sira + 1].k; ciz(); } }) : null))),
+            h('button', { class: 'btn', type: 'button', text: biten.has(d.k) ? t('r.tamam') : t('r.isaretle'), disabled: biten.has(d.k), onclick: () => { biten.add(d.k); rehberYaz(biten); ciz('sonraki'); } }),
+            sira < DERSLER.length - 1 ? h('button', { class: 'btn', type: 'button', 'data-o': 'sonraki', text: t('r.sonraki'), onclick: () => { biten.add(d.k); rehberYaz(biten); secili = DERSLER[sira + 1].k; ciz('ders'); } }) : null))),
       h('div', { class: 'foot' }, h('span'), h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
     ], true);
+    const p = $('panel'), hedef = odak === 'sonraki' ? (anahtarli(p, 'sonraki') || p.querySelector('article h2')) : odak === 'ders' ? p.querySelector('article h2') : null;
+    if (hedef) hedef.focus();
   }
   ciz();
 }

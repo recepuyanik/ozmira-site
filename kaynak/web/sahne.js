@@ -18,6 +18,12 @@ const SOFT_FRAG = 'varying vec3 vC; varying float vA; void main(){ float r = len
 
 // Sistemlerin sahnedeki yeri: 1-4 sistem sol, sağ, üst, alt; 5 ve fazlası elips üzerinde eşit aralıklı (8'den sonra elips sistem sayısıyla büyür).
 function konumlar(n) {
+  if (n > 8) {   // 8'den sonra her 8 sistem yeni bir halkada; dış halka yarım adım kaydırılır
+    const out = [], P8 = Math.PI;
+    for (let k = 0, i = 0; i < n; k++) { const m = Math.min(8, n - i), RX = 15 + k * 10, RY = 12.5 + k * 8.6, kay = k % 2 ? P8 / 8 : 0;
+      for (let j = 0; j < m; j++, i++) { const a = P8 - (j * TAU) / m - kay; out.push({ a, c: new THREE.Vector3(Math.cos(a) * RX, Math.sin(a) * RY, 0) }); } }
+    return out;
+  }
   const big = n >= 5, RX = big ? Math.max(11.5, 1.35 * n) : 9.5, RY = big ? Math.max(10, 1.2 * n) : 8.6, P = Math.PI;
   const sets = { 1: [P], 2: [P, 0], 3: [P, 0, P / 2], 4: [P, 0, P / 2, -P / 2] };
   const angs = sets[n] || Array.from({ length: n }, (_, i) => P - (i * TAU) / n);
@@ -206,6 +212,7 @@ export function createSahne(host, opts = {}) {
   const merkezEtiket = mkLabel('t:merkez', 'OZMIRA', new V3(0, -2.9, 0), 'title');
 
   // ---------- Durum: sistemler ve ajanlar ----------
+  const halkaCizgi = [];
   const systems = new Map(), agents = new Map(), presets = { hepsi: { pos: new V3(0, 1.5, 37), tgt: new V3() }, merkez: { pos: new V3(0, 1, 7), tgt: new V3() } };
   let sig = '', now = 0, selected = null, onSelectCb = opts.onSelect || null, firstBuild = true;
   const tmpV = new V3(), linePts = new V3();
@@ -229,7 +236,11 @@ export function createSahne(host, opts = {}) {
   }
   function rebuild(d) {
     clearAll(); setMerkezRenk(d.merkez.renk); merkezEtiket.el.textContent = d.merkez.ad.toUpperCase(); merkezEtiket.dirty = true;
-    const n = d.sistemler.length, pos = konumlar(n); presets.hepsi.pos.set(0, 1.5, n >= 5 ? Math.max(46, (Math.max(10, 1.2 * n) + 5) / 0.364) : 37);
+    const n = d.sistemler.length, pos = konumlar(n); const halkaN = n > 8 ? Math.ceil(n / 8) : 0, disRY = halkaN ? 12.5 + (halkaN - 1) * 8.6 : Math.max(10, 1.2 * n);
+    presets.hepsi.pos.set(0, halkaN ? -2 : 1.5, n >= 5 ? Math.max(46, (disRY + (halkaN ? 9 : 6)) / 0.364) : 37); presets.hepsi.tgt.set(0, halkaN ? -3.5 : 0, 0);
+    halkaCizgi.forEach((x) => { scene.remove(x); x.geometry.dispose(); }); halkaCizgi.length = 0;
+    for (let k = 0; k < halkaN; k++) { const pts = []; for (let j = 0; j <= 160; j++) { const a = (j / 160) * TAU; pts.push(new V3(Math.cos(a) * (15 + k * 10), Math.sin(a) * (12.5 + k * 8.6), -0.4)); }
+      const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x9fb2dc, transparent: true, opacity: 0.16, depthWrite: false })); scene.add(ln); halkaCizgi.push(ln); }
     d.sistemler.forEach((s, i) => {
       const { a, c } = pos[i], col = new THREE.Color(s.renk), objs = [], b = STIL[s.stil](c, a, col, objs);
       const sys = { id: s.id, ad: s.ad, stil: s.stil, col, c, objs, b }; systems.set(s.id, sys);

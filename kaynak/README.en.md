@@ -1,5 +1,7 @@
 # OZMIRA
 
+> PROTOTYPE: OZMIRA is currently a prototype. You may run into bugs; report them on the feedback screen. On Windows, double-click `OZMIRA-BASLAT.bat` to start.
+
 [Türkçe](README.md) · English · [Deutsch](README.de.md) · [Español](README.es.md)
 
 A local app that shows your own AI systems in one 3D scene. Each system appears in its own color and shape (galaxy, hologram fiber, double helix, black hole, sphere). When an agent starts working, a signal travels from the center to it, returns when the job is done, and the tokens spent show up in the scene.
@@ -17,7 +19,7 @@ You need: Python 3.8 or later (tested on 3.13) and an up-to-date browser. Nothin
 | Linux | `./ozmira.sh` |
 | All | `python3 ozmira.py` (on Windows: `py ozmira.py`) |
 
-The browser opens by itself. If it does not, go to the `http://localhost:8787/` address printed in the terminal. Press Ctrl+C in the terminal to stop.
+The browser opens by itself. If it does not, open the `ac.html` file shown on the "To open" line in the terminal (it is in your data folder; only your account can read it). Typing `http://localhost:8787/` directly does not work: the first visit goes through this file so that other accounts on the same computer cannot get the key; after that the browser remembers you for 30 days. Press Ctrl+C in the terminal to stop.
 
 On first start you get a sample scene and a setup wizard. In the wizard you name the center and add your systems. There are ready templates (Claude, ChatGPT, Gemini, Grok, Other); you can change name, style and color. Later you can change everything with the Edit button at the bottom.
 
@@ -93,7 +95,7 @@ If an agent reports `basla` and does not report `bitti` within 30 minutes, it st
 
 ## Privacy and security
 
-- **Where the data is:** in the `.ozmira` folder in your home directory (`profil.json`, `olaylar.jsonl`, `ayar.json`, `kullanim.json`, `.token`). Set the `OZMIRA_HOME` environment variable for another place. Unless you share this folder, nobody sees your system. The app folder itself holds no personal data and can be shared.
+- **Where the data is:** in the `.ozmira` folder in your home directory (`profil.json`, `olaylar.jsonl`, `sohbet.jsonl`, `ayar.json`, `kullanim.json`, `.token`). Set the `OZMIRA_HOME` environment variable for another place. Unless you share this folder, nobody sees your system. The app folder itself holds no personal data and can be shared.
 - **Closed to the network:** the server listens on `localhost` only. Other computers cannot connect.
 - **Key:** a random key is created on first run (`.ozmira/.token`; on macOS and Linux only your user can read it; on Windows file permissions work differently, so if you share your computer with others, put the folder in a protected place). All API requests require this key; Host and Origin headers are checked.
 - **Sharing is off by default.** If you allow it in the Account window and a collector address (`geri_bildirim_adresi.txt`) came with this copy, the following is sent anonymously at most once a day: version, plan, a random installation ID and counters (events received, times the profile was saved). Your system names, agent names, task labels, folder paths, token amounts and IP address are not sent. Text you write in the feedback window is also sent only with this permission; what you write is in every case also saved in the data folder on this computer.
@@ -137,15 +139,36 @@ The server becomes reachable from the same network and the terminal prints an ad
 
 - The scene is a heavy 3D image. On old graphics cards or in battery saver mode the quality drops by itself; glow may switch off.
 - Technical ceiling (Pro included): 24 systems, 200 agents per system. With more than 8 systems the scene grows and the camera moves back; this layout has not yet been visually tried on a real graphics card.
-- Version 0.3.0. Designed for local use only.
+- Version 0.3.2. Designed for local use only.
 - The app window and desktop shortcut were tested with automated tests on Linux; the shortcut command has not yet been tried on a real Windows or macOS computer. If it does not work, use `ozmira-uygulama.bat` / `.command`.
 - The translations of the four languages were prepared with AI; a native speaker of English, German or Spanish should review them.
 - The scene was tried on a single Windows computer with a real graphics card. If the scene does not appear on first start on other graphics cards, check that WebGL is enabled in the browser.
 
+## New in 0.3.2 (security)
+
+- The main page and the key inside it are now given only to the browser opened by the launcher (a single-use launch key and a 30-day session cookie). Before, another account on the same computer could get the key from `127.0.0.1`.
+- In network mode (`--lan`) a remote client can no longer make OZMIRA scan a new folder on the computer.
+- Agent names that could affect the shell are no longer put into the copy-ready commands in the Connect window.
+- CSV export cells that start like a formula no longer run in spreadsheet programs.
+- Prepared after an audit with Cloudflare's open-source security-audit skill.
+
+## New in 0.3.1
+
+- **Rings:** with more than 8 systems, every 8 systems move to a new ring; outer rings are offset half a step so systems do not overlap. Tested only in a software-rendering browser; not yet checked on a real graphics card.
+- **Collapsible bottom bar:** "Hide" shrinks the bottom bar, "Menu" opens it again. The choice is remembered in this browser. With many systems, the system buttons scroll sideways in one row.
+- **Motion:** token and run counts count up to the new value in 0.4 seconds; system names settle letter by letter only on first launch. If reduced motion is on in your operating system, nothing moves.
+- **Fix:** `ozmira-masaustune-ekle.bat` now works on Windows.
+
 ## New in 0.3.0
 
 - **Panel:** the Panel button in the bar opens the control panel: summary tiles, bars for the last 7 days, a searchable and sortable agent table, an event list and CSV export. Start and Finish record an event by hand; they do not run the agent.
-- **Guide:** the Guide button explains setup and further topics in ten short lessons.
+- **Guide:** the Guide button explains setup and further topics in twelve short lessons.
 - **Claude Code connection:** `ozmira_hook.py` sends an event to OZMIRA when Claude Code starts and finishes a subagent. In the `hooks` section of your Claude Code settings, add this command for `PreToolUse` and `PostToolUse` (matcher: `Task|Agent`): `python ozmira_hook.py` (with the full file path). If your system id is not `claude`, set the `OZMIRA_SISTEM` environment variable. Tested with simulated input; not yet tried with a real Claude Code.
 - **Flow:** the Flow tab in the panel shows input and output tokens per system and agent. To report the split: `ozmira.py olay <system> <agent> bitti girdi=800 cikti=400` (girdi = input, cikti = output). If you enter prices it estimates the cost; prices are kept only in the browser.
+- **Shared chat:** the Chat button in the bar opens a single text box. OZMIRA looks at the topic of your message and sends it to the best match among the systems you set up (software to Claude, product and ideas to ChatGPT, documents and data to Gemini, news and trends to Grok), and shows above the answer which one it chose and why. To get an answer, that AI's command-line tool must be installed on this computer (`claude`, `codex`, `gemini`); there is no tool support for Grok yet. The automated tests use simulated tools; it has not yet been tried with the real ones. Chat is off in `--lan` mode.
+- **Projects:** if you open a project name in the chat, that project's messages are kept separately and come back when you open the project again. The free version allows 2 projects; Pro has no limit.
+- **Beta limit:** the free version allows 50 chat messages a day. In Pro, chat is unlimited and the general (no project) history is kept as well.
+- **System mode (Pro):** when you focus a system from the bar, its name appears in large letters below the scene.
+- **Save to a notes vault (optional):** if you give a notes vault folder in the Account window, every chat message is also added to a Markdown note in the `outputs/ozmira/` folder inside the vault (messages without a project go to `Genel.md`, project messages to a file named after the project). It is meant for notes apps that keep your notes as Markdown files in a folder. Off by default; OZMIRA writes nowhere else in the vault. Tested with automated tests on Linux; not yet tried with a real notes app.
+- **Logo-based center:** the center of the scene is now built from the OZMIRA mark: a white core with rings that cross and drift around it, as in the logo. The rings take the color you chose for the center.
 - **Copyright:** © 2026 OZMIRA, all rights reserved. See `LISANS.txt`.

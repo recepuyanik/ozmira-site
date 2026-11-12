@@ -1,5 +1,7 @@
 # OZMIRA
 
+> PROTOTYP: OZMIRA ist derzeit ein Prototyp. Es können Fehler auftreten; melde sie im Feedback-Bildschirm. Unter Windows startest du mit einem Doppelklick auf `OZMIRA-BASLAT.bat`.
+
 [Türkçe](README.md) · [English](README.en.md) · Deutsch · [Español](README.es.md)
 
 Eine lokale App, die deine eigenen KI-Systeme in einer einzigen 3D-Szene zeigt. Jedes System erscheint in eigener Farbe und Form (Galaxie, Hologramm-Faser, Doppelhelix, Schwarzes Loch, Kugel). Beginnt ein Agent zu arbeiten, läuft ein Signal vom Zentrum zu ihm, kehrt nach getaner Arbeit zurück, und die verbrauchten Tokens erscheinen in der Szene.
@@ -17,7 +19,7 @@ Voraussetzungen: Python 3.8 oder neuer (mit 3.13 getestet) und ein aktueller Bro
 | Linux | `./ozmira.sh` |
 | Alle | `python3 ozmira.py` (unter Windows: `py ozmira.py`) |
 
-Der Browser öffnet sich von selbst. Falls nicht, rufe die im Terminal angezeigte Adresse `http://localhost:8787/` auf. Zum Beenden im Terminal Strg+C drücken.
+Der Browser öffnet sich von selbst. Falls nicht, öffne die Datei `ac.html` aus der Zeile "Zum Öffnen" im Terminal im Browser (sie liegt in deinem Datenordner; nur dein Konto kann sie lesen). `http://localhost:8787/` direkt aufzurufen funktioniert nicht: Der erste Besuch läuft über diese Datei, damit andere Konten auf demselben Computer den Schlüssel nicht bekommen; danach merkt sich der Browser dich 30 Tage lang. Zum Beenden im Terminal Strg+C drücken.
 
 Beim ersten Start erscheinen eine Beispielszene und ein Einrichtungsassistent. Im Assistenten benennst du das Zentrum und fügst deine Systeme hinzu. Es gibt fertige Vorlagen (Claude, ChatGPT, Gemini, Grok, Andere); Name, Stil und Farbe kannst du ändern. Später lässt sich alles mit der Schaltfläche Bearbeiten unten ändern.
 
@@ -93,7 +95,7 @@ Meldet ein Agent `basla` und innerhalb von 30 Minuten kein `bitti`, wird er in d
 
 ## Datenschutz und Sicherheit
 
-- **Wo die Daten liegen:** im Ordner `.ozmira` in deinem Home-Verzeichnis (`profil.json`, `olaylar.jsonl`, `ayar.json`, `kullanim.json`, `.token`). Für einen anderen Ort setze die Umgebungsvariable `OZMIRA_HOME`. Solange du diesen Ordner nicht teilst, sieht niemand dein System. Der App-Ordner selbst enthält keine persönlichen Daten und kann weitergegeben werden.
+- **Wo die Daten liegen:** im Ordner `.ozmira` in deinem Home-Verzeichnis (`profil.json`, `olaylar.jsonl`, `sohbet.jsonl`, `ayar.json`, `kullanim.json`, `.token`). Für einen anderen Ort setze die Umgebungsvariable `OZMIRA_HOME`. Solange du diesen Ordner nicht teilst, sieht niemand dein System. Der App-Ordner selbst enthält keine persönlichen Daten und kann weitergegeben werden.
 - **Nach außen geschlossen:** Der Server lauscht nur auf `localhost`. Andere Computer können sich nicht verbinden.
 - **Schlüssel:** Beim ersten Start wird ein zufälliger Schlüssel erzeugt (`.ozmira/.token`; unter macOS und Linux kann ihn nur dein Benutzer lesen; unter Windows funktionieren Dateirechte anders, wenn du den Computer mit anderen teilst, lege den Ordner daher an einen geschützten Ort). Alle API-Anfragen verlangen diesen Schlüssel; die Header Host und Origin werden geprüft.
 - **Teilen ist standardmäßig aus.** Erlaubst du es im Konto-Fenster und liegt dieser Kopie eine Sammeladresse (`geri_bildirim_adresi.txt`) bei, wird höchstens einmal täglich Folgendes anonym gesendet: Version, Plan, eine zufällige Installations-ID und Zähler (empfangene Ereignisse, Anzahl der Profilspeicherungen). Deine Systemnamen, Agentennamen, Aufgabenbezeichnungen, Ordnerpfade, Token-Mengen und deine IP-Adresse werden nicht gesendet. Auch der Text, den du im Feedback-Fenster schreibst, wird nur mit dieser Erlaubnis gesendet; was du schreibst, wird in jedem Fall zusätzlich im Datenordner auf diesem Computer gespeichert.
@@ -137,15 +139,36 @@ Der Server ist dann aus demselben Netzwerk erreichbar, und das Terminal zeigt ei
 
 - Die Szene ist ein aufwendiges 3D-Bild. Auf alten Grafikkarten oder im Energiesparmodus sinkt die Qualität von selbst; der Leuchteffekt kann entfallen.
 - Technische Obergrenze (auch in Pro): 24 Systeme, 200 Agenten pro System. Bei mehr als 8 Systemen wird die Szene größer und die Kamera rückt weg; diese Anordnung wurde auf einer echten Grafikkarte noch nicht visuell erprobt.
-- Version 0.3.0. Nur für die lokale Nutzung gedacht.
+- Version 0.3.2. Nur für die lokale Nutzung gedacht.
 - Das App-Fenster und die Desktop-Verknüpfung wurden unter Linux mit automatischen Tests geprüft; der Verknüpfungsbefehl wurde auf einem echten Windows- oder macOS-Computer noch nicht ausprobiert. Funktioniert er nicht, nutze `ozmira-uygulama.bat` / `.command`.
 - Die Übersetzungen der vier Sprachen wurden mit KI erstellt; ein Muttersprachler für Englisch, Deutsch oder Spanisch sollte sie prüfen.
 - Die Szene wurde auf einem einzelnen Windows-Computer mit echter Grafikkarte erprobt. Erscheint sie auf anderen Grafikkarten beim ersten Start nicht, prüfe, ob WebGL im Browser aktiviert ist.
 
+## Neu in 0.3.2 (Sicherheit)
+
+- Die Startseite und der Schlüssel darin gehen jetzt nur an den Browser, den der Starter öffnet (einmaliger Startschlüssel und 30-Tage-Sitzungscookie). Vorher konnte ein anderes Konto auf demselben Computer den Schlüssel über `127.0.0.1` holen.
+- Im Netzwerkmodus (`--lan`) kann ein entfernter Client keinen neuen Ordner auf dem Computer mehr scannen lassen.
+- Agentennamen, die die Shell beeinflussen könnten, landen nicht mehr in den kopierbaren Befehlen im Verbinden-Fenster.
+- CSV-Zellen, die wie eine Formel beginnen, werden in Tabellenprogrammen nicht mehr ausgeführt.
+- Entstanden nach einer Prüfung mit dem Open-Source-security-audit-Skill von Cloudflare.
+
+## Neu in 0.3.1
+
+- **Ringe:** Bei mehr als 8 Systemen kommen je 8 Systeme in einen neuen Ring; äußere Ringe sind um einen halben Schritt versetzt, damit sich nichts überdeckt. Nur in einem Browser mit Software-Rendering getestet; auf einer echten Grafikkarte noch nicht geprüft.
+- **Einklappbare Leiste:** "Ausblenden" verkleinert die untere Leiste, "Menü" öffnet sie wieder. Die Wahl merkt sich dieser Browser. Bei vielen Systemen scrollen die Systemknöpfe in einer Zeile seitwärts.
+- **Bewegung:** Token- und Laufzahlen zählen in 0,4 Sekunden zum neuen Wert; Systemnamen setzen sich nur beim ersten Start Buchstabe für Buchstabe. Ist im Betriebssystem "Bewegung reduzieren" aktiv, bewegt sich nichts.
+- **Korrektur:** `ozmira-masaustune-ekle.bat` funktioniert jetzt unter Windows.
+
 ## Neu in 0.3.0
 
 - **Panel:** Die Schaltfläche Panel öffnet die Verwaltung: Übersichtskacheln, Balken der letzten 7 Tage, eine durchsuchbare und sortierbare Agententabelle, eine Ereignisliste und CSV-Export. Starten und Beenden speichern ein Ereignis von Hand; sie führen den Agenten nicht aus.
-- **Anleitung:** Die Schaltfläche Anleitung erklärt Einrichtung und weiterführende Themen in zehn kurzen Lektionen.
+- **Anleitung:** Die Schaltfläche Anleitung erklärt Einrichtung und weiterführende Themen in zwölf kurzen Lektionen.
 - **Claude-Code-Anbindung:** `ozmira_hook.py` sendet ein Ereignis an OZMIRA, wenn Claude Code einen Subagenten startet und beendet. Trage im Abschnitt `hooks` der Claude-Code-Einstellungen für `PreToolUse` und `PostToolUse` (Matcher: `Task|Agent`) diesen Befehl ein: `python ozmira_hook.py` (mit vollständigem Dateipfad). Ist deine System-ID nicht `claude`, setze die Umgebungsvariable `OZMIRA_SISTEM`. Mit simulierten Eingaben getestet; mit einem echten Claude Code noch nicht ausprobiert.
 - **Fluss:** Der Tab Fluss im Panel zeigt Eingabe- und Ausgabe-Tokens pro System und Agent. So meldest du die Aufteilung: `ozmira.py olay <System> <Agent> bitti girdi=800 cikti=400` (girdi = Eingabe, cikti = Ausgabe). Mit eingetragenen Preisen werden die Kosten geschätzt; die Preise bleiben nur im Browser.
+- **Gemeinsamer Chat:** Die Schaltfläche Chat öffnet ein einziges Textfeld. OZMIRA sieht sich das Thema deiner Nachricht an und schickt sie an das passende unter den eingerichteten Systemen (Software an Claude, Produkt und Ideen an ChatGPT, Dokumente und Daten an Gemini, Nachrichten und Trends an Grok) und zeigt über der Antwort, welches System gewählt wurde und warum. Für eine Antwort muss das Kommandozeilenwerkzeug der jeweiligen KI auf diesem Computer installiert sein (`claude`, `codex`, `gemini`); für Grok gibt es noch keine Werkzeug-Unterstützung. Die automatischen Tests laufen mit simulierten Werkzeugen; mit den echten wurde es noch nicht ausprobiert. Im `--lan`-Modus ist der Chat ausgeschaltet.
+- **Projekte:** Öffnest du im Chat einen Projektnamen, werden die Nachrichten dieses Projekts getrennt gespeichert und sind beim erneuten Öffnen wieder da. Die kostenlose Version erlaubt 2 Projekte; in Pro gibt es kein Limit.
+- **Beta-Limit:** Die kostenlose Version erlaubt 50 Chat-Nachrichten pro Tag. In Pro ist der Chat unbegrenzt, und auch der allgemeine Verlauf (ohne Projekt) bleibt gespeichert.
+- **Systemmodus (Pro):** Wenn du über die Leiste ein System fokussierst, erscheint sein Name in großer Schrift unter der Szene.
+- **Speichern im Notiz-Vault (optional):** Gibst du im Konto-Fenster den Ordner eines Notiz-Vaults an, wird jede Chat-Nachricht zusätzlich einer Markdown-Notiz im Ordner `outputs/ozmira/` innerhalb des Vaults hinzugefügt (Nachrichten ohne Projekt in `Genel.md`, Projektnachrichten in einer Datei mit dem Namen des Projekts). Gedacht für Notiz-Apps, die deine Notizen als Markdown-Dateien in einem Ordner ablegen. Standardmäßig aus; OZMIRA schreibt an keiner anderen Stelle in den Vault. Mit automatischen Tests unter Linux geprüft; mit einer echten Notiz-App noch nicht ausprobiert.
+- **Zentrum aus dem Logo:** Das Zentrum der Szene entsteht jetzt aus dem OZMIRA-Zeichen: ein weißer Kern mit Ringen, die sich wie im Logo überkreuzen und verschieben. Die Ringe übernehmen die Farbe, die du für das Zentrum gewählt hast.
 - **Urheberrecht:** © 2026 OZMIRA, alle Rechte vorbehalten. Siehe `LISANS.txt`.

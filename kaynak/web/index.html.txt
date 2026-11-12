@@ -21,8 +21,9 @@
   <h2 id="cn"></h2><div class="sub" id="cs"></div><p id="cd"></p>
   <dl><dt data-i18n="card.calisma">Çalışma</dt><dd id="cr"></dd><dt data-i18n="card.token">Token</dt><dd id="ct"></dd><dt data-i18n="card.durum">Durum</dt><dd id="ck"></dd></dl>
 </section>
+<div class="mod" id="mod" hidden aria-live="polite"></div>
 <div class="dock" id="dock"></div>
-<div class="sig" id="sig">OZMIRA</div>
+<div class="sig" id="sig"><svg viewBox="0 0 200 200" aria-hidden="true" focusable="false"><g transform="translate(14 -14)" fill="none" stroke="currentColor" stroke-width="10"><circle cx="86" cy="114" r="78" opacity=".4"/><circle cx="100" cy="100" r="46" opacity=".75"/><circle cx="114" cy="86" r="16" fill="currentColor" stroke="none"/></g></svg>OZMIRA</div>
 <div class="modal" id="modal" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
 <div id="fallback" role="alert" data-i18n="fail.kisa">3B sahne başlatılamadı.</div>
 <script type="module" src="/app.js"></script>

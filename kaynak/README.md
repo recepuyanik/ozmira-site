@@ -19,7 +19,7 @@ Gereken: Python 3.8 veya üstü (3.13'te sınandı) ve güncel bir tarayıcı. B
 | Linux | `./ozmira.sh` |
 | Hepsi | `python3 ozmira.py` (Windows'ta `py ozmira.py`) |
 
-Tarayıcı kendiliğinden açılır. Açılmazsa terminalde yazan `http://localhost:8787/` adresine git. Durdurmak için terminalde Ctrl+C.
+Tarayıcı kendiliğinden açılır. Açılmazsa terminalde "Açmak için" satırında yazan `ac.html` dosyasını tarayıcıda aç (veri klasöründedir; yalnızca senin hesabın okuyabilir). `http://localhost:8787/` adresi doğrudan açılmaz: aynı bilgisayardaki başka hesaplar anahtarı göremesin diye ilk açılış bu dosyadan yapılır, sonra tarayıcı 30 gün hatırlar. Durdurmak için terminalde Ctrl+C.
 
 İlk açılışta örnek bir sahne ve kurulum sihirbazı gelir. Sihirbazda merkezin adını seçer, sistemlerini eklersin. Hazır şablonlar var (Claude, ChatGPT, Gemini, Grok, Başka); ad, stil ve rengi istediğin gibi değiştirebilirsin. Sonradan alttaki Düzenle düğmesiyle her şeyi değiştirebilirsin.
 
@@ -137,10 +137,25 @@ Sunucu aynı ağdan erişilebilir olur ve terminal telefon için bir adres yazar
 
 - Sahne ağır bir 3B görüntüdür. Eski ekran kartlarında ya da pil tasarrufundayken kalite kendiliğinden düşer; ışıma kapanabilir.
 - Teknik tavan (Pro dahil): 24 sistem, sistem başına 200 ajan. 8'den fazla sistemde sahne büyür ve kamera uzaklaşır; bu yerleşim gerçek ekran kartında henüz görsel olarak denenmedi.
-- Sürüm 0.3.0. Yalnızca yerel kullanım için tasarlandı.
+- Sürüm 0.3.2. Yalnızca yerel kullanım için tasarlandı.
 - Uygulama penceresi ve masaüstü kısayolu Linux'ta otomatik testlerle sınandı; Windows ve macOS'ta kısayol komutu henüz gerçek bir bilgisayarda denenmedi. Çalışmazsa `ozmira-uygulama.bat` / `.command` dosyalarını kullan.
 - Dört dilin çevirileri yapay zekâ ile hazırlandı; ana dili İngilizce, Almanca ya da İspanyolca olan biri bir gözden geçirmeli.
 - Sahne tek bir Windows bilgisayarda gerçek ekran kartıyla denendi. Diğer ekran kartlarında ilk açılışta sahne görünmezse tarayıcıda WebGL'in açık olduğunu kontrol et.
+
+## 0.3.2 ile gelenler (güvenlik)
+
+- Ana sayfa ve içindeki anahtar artık yalnızca başlatıcının açtığı tarayıcıya verilir (tek kullanımlık açılış anahtarı ve 30 günlük oturum çerezi). Önceden aynı bilgisayardaki başka bir hesap `127.0.0.1` adresinden anahtarı alabiliyordu.
+- Ağ modunda (`--lan`) uzaktaki istemci yeni bir bilgisayar klasörü taratamaz.
+- Bağlan penceresindeki kopyalanacak komutlara kabuğu etkileyebilecek ajan adları girmez.
+- CSV dışa aktarımında formül gibi başlayan hücreler tablo programında çalışmaz.
+- Bu sürüm Cloudflare'in açık kaynak security-audit skill'iyle yapılan denetimden sonra hazırlandı.
+
+## 0.3.1 ile gelenler
+
+- **Halkalar:** 8'den fazla sistem olunca her 8 sistem yeni bir halkaya geçer; dış halka yarım adım kayar, sistemler üst üste binmez. Yalnızca yazılımla çizen tarayıcıda denendi; gerçek ekran kartında henüz bakılmadı.
+- **Açılır alt menü:** alttaki çubuk "Gizle" ile küçülür, "Menü" ile geri açılır. Seçim bu tarayıcıda hatırlanır. Çok sistemde sistem düğmeleri tek satırda yana kayar.
+- **Hareket:** token ve çalışma sayıları 0,4 saniyede sayarak yeni değere geçer; sistem adları yalnızca ilk açılışta harf harf yerine oturur. İşletim sisteminde hareket azaltma açıksa hiçbir hareket olmaz.
+- **Düzeltme:** `ozmira-masaustune-ekle.bat` Windows'ta doğru çalışır.
 
 ## 0.3.0 ile gelenler
 
