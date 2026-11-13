@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ozma Karar Ağı · OZMIRA</title>
+<meta name="description" content="Ozma'nın yapay zekâlarına görev dağıtan, tarayıcında eğitilen canlı bir sinir ağı.">
+<meta name="theme-color" content="#03061A">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://ozmira.app/ag.html">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon.png" type="image/png" sizes="256x256">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<style>
+/* Üç sütun: solda görev ver, ortada nöral editör, sağda kim ne yapıyor. Telefonda alt alta. Tek koyu görünüm. */
+:root{
+  --zemin:#03061A; --serit:#060B26; --panel:#070D2E; --kutu:#0A1240; --cizgi:#1E2A66; --cizgi2:#2C3B85;
+  --yazi:#C9D2FF; --soluk:#7F8BCC; --sonuk:#4F5A99; --camgobegi:#1EBEF0; --vurgu:#D3DA89; --altin:#F3B84B;
+  --mono:"JetBrains Mono",Consolas,"Cascadia Mono",ui-monospace,Menlo,monospace;
+  --serif:"Instrument Serif",Georgia,"Times New Roman",serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--zemin);color:var(--yazi);font:13px/1.45 var(--mono);-webkit-font-smoothing:antialiased;
+  display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+button,input{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--camgobegi);outline-offset:2px}
+.ust{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;background:var(--serit);border-bottom:1px solid var(--cizgi);
+  padding-top:calc(8px + env(safe-area-inset-top,0px));padding-bottom:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.geri{color:var(--altin);text-decoration:none;font-weight:500;letter-spacing:.06em}
+.geri:hover{text-decoration:underline}
+.baslik{font-weight:500}.baslik span{color:var(--soluk);font-weight:400}
+.sekme{background:none;border:0;border-bottom:1px solid transparent;color:var(--soluk);padding:4px 2px;cursor:pointer}
+.sekme[aria-pressed=true]{color:var(--camgobegi);border-bottom-color:var(--camgobegi)}
+.sag{margin-inline-start:auto;color:var(--soluk)}
+.dil{position:relative}
+.dil-b{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px;border-radius:999px;border:0;cursor:pointer;background:var(--kutu);box-shadow:inset 0 0 0 1px var(--cizgi);font-size:12px;letter-spacing:.06em}
+.dil-b svg{width:14px;height:14px;flex:none}
+.dil-b[aria-expanded=true] .ok{transform:rotate(180deg)}
+.dil-m{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:40;min-width:200px;padding:6px;border-radius:12px;background:#08103A;box-shadow:0 0 0 1px var(--cizgi2),0 20px 40px -10px rgba(0,0,0,.8);display:grid;gap:2px}
+.dil-m button{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;min-height:36px;padding:0 10px;border-radius:8px;cursor:pointer;color:var(--soluk);font:500 13.5px/1 var(--mono)}
+.dil-m button b{font-weight:500;color:var(--camgobegi);width:22px;font-size:11px}
+.dil-m button:hover,.dil-m button:focus-visible{background:rgba(255,255,255,.06);color:#fff}
+.dil-m button[aria-checked=true]{background:var(--camgobegi);color:#03061A}.dil-m button[aria-checked=true] b{color:#03061A}
+.duzen{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr) minmax(0,340px);min-height:0}
+.yan{background:var(--panel);overflow-y:auto;min-width:0;padding-block:14px 24px;padding-inline:14px}
+.yan.sol{border-inline-end:1px solid var(--cizgi);padding-inline-start:max(14px,env(safe-area-inset-left,0px))}
+.yan.sag2{border-inline-start:1px solid var(--cizgi);padding-inline-end:max(14px,env(safe-area-inset-right,0px))}
+.orta{display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0;min-width:0}
+.sahne{position:relative;min-height:0;direction:ltr}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas.surukle{cursor:grabbing}
+.alt{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;background:var(--serit);border-top:1px solid var(--cizgi);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+button.dg{font-size:12px;background:var(--kutu);border:1px solid var(--cizgi);border-radius:4px;padding:6px 9px;cursor:pointer;white-space:nowrap}
+button.dg:hover{border-color:var(--camgobegi)}
+#durum{color:var(--soluk);min-width:0}#durum b{color:var(--yazi);font-weight:500}#durum i{font-style:normal;color:var(--vurgu)}
+h2{font:500 10.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--soluk);margin:0 0 12px;display:flex;justify-content:space-between}
+h2 span{color:var(--sonuk);letter-spacing:.06em}
+.grup{border-top:1px solid var(--cizgi);padding-top:12px;margin-top:12px}
+.grup>p{font:500 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--sonuk);margin:0 0 9px}
+.cipler{display:flex;flex-wrap:wrap;gap:6px}
+.cip{font-size:12px;background:var(--kutu);border:1px solid var(--cizgi);border-radius:999px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.cip:hover{border-color:var(--cizgi2)}
+.cip i{width:8px;height:8px;border-radius:50%;background:var(--r,var(--camgobegi));flex:none}
+.cip[aria-pressed=true]{border-color:var(--r,var(--camgobegi));background:color-mix(in srgb,var(--r,var(--camgobegi)) 16%,var(--kutu));color:#fff}
+.ad-kutu{width:100%;background:var(--kutu);border:1px solid var(--cizgi);border-radius:6px;padding:8px 10px;margin-bottom:10px}
+.ad-kutu::placeholder{color:var(--sonuk)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.kay{display:grid;grid-template-columns:84px minmax(0,1fr) 32px;align-items:center;gap:8px;margin:7px 0;color:var(--soluk);font-size:12px}
+.kay output{text-align:end;color:var(--yazi)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:3px;background:linear-gradient(90deg,var(--camgobegi) var(--d,50%),var(--cizgi2) var(--d,50%))}
+[dir=rtl] input[type=range]::-webkit-slider-runnable-track{background:linear-gradient(270deg,var(--camgobegi) var(--d,50%),var(--cizgi2) var(--d,50%))}
+input[type=range]::-moz-range-track{height:3px;background:var(--cizgi2);border-radius:3px}
+input[type=range]::-moz-range-progress{height:3px;background:var(--camgobegi);border-radius:3px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#BFF1FF;margin-top:-5px;border:0}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#BFF1FF;border:0}
+.karar{border:1px solid var(--r,var(--cizgi2));border-radius:10px;padding:12px;margin-bottom:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--r,#1EBEF0) 14%,transparent),transparent)}
+.karar small{font:500 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--soluk)}
+.karar .kim{font:400 30px/1.05 var(--serif);color:var(--r,#fff);margin:6px 0 4px}
+.karar .icin{color:var(--soluk);font-size:12px;margin-bottom:8px}
+.karar ul{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:2px;font-size:12px;color:var(--soluk)}
+.karar ul b{font-weight:500}.art{color:#9FF0C8}.eks{color:#FF9DB0}
+.karar .uyum{font-size:11.5px;color:var(--sonuk);margin-bottom:10px}
+.ver{width:100%;background:var(--r,#1EBEF0);color:#060B26;border:0;border-radius:6px;padding:9px 10px;font-weight:500;cursor:pointer}
+.ver:hover{filter:brightness(1.08)}
+#liste{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+#liste li{border:1px solid var(--cizgi);border-inline-start:3px solid var(--r);border-radius:8px;padding:9px 10px;cursor:pointer;background:var(--kutu)}
+#liste li.gosterilen{border-color:var(--r)}
+.r1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.r1 .ad{color:var(--r);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r1 .sira{color:var(--sonuk);margin-inline-end:6px;font-weight:400}
+.r1 .puan{font-variant-numeric:tabular-nums}
+li.kazanan .r1 .puan{color:var(--r)}
+.cub{position:relative;height:4px;background:var(--cizgi);border-radius:4px;margin:7px 0;direction:ltr}
+.cub i{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--r);width:0;transition:width .25s}
+.cub b{position:absolute;top:-3px;width:2px;height:10px;background:#fff;opacity:.5}
+.r2{display:flex;justify-content:space-between;font-size:11px;color:var(--sonuk)}
+.isler{display:grid;gap:4px;margin-top:6px}
+.is{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:7px;font-size:11.5px;color:var(--yazi)}
+.is i{width:8px;height:8px;border-radius:2px;background:var(--d)}
+.is span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.is em{font-style:normal;color:var(--sonuk);font-variant-numeric:tabular-nums}
+.is .ilerle{grid-column:2/4;height:2px;background:var(--cizgi);border-radius:2px;overflow:hidden}
+.is .ilerle u{display:block;height:100%;background:var(--d);text-decoration:none}
+.lejant{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:12px;font-size:11px;color:var(--sonuk)}
+.not{margin-top:12px;font-size:11.5px;color:var(--sonuk);line-height:1.5}
+@media (max-width:1100px){
+  body{display:block;overflow:auto;height:auto}
+  .duzen{grid-template-columns:minmax(0,1fr)}
+  .orta{order:-1;grid-template-rows:auto auto}
+  .sahne{height:clamp(300px,56vw,620px)}
+  .yan{overflow:visible;border:0!important;border-top:1px solid var(--cizgi)!important;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+}
+</style>
+</head><body>
+<div class="ust">
+  <a class="geri" href="./" data-l="geri">OZMIRA</a>
+  <div class="baslik"><span data-l="baslik">Ozma Nöral Ağ</span> <span id="toplam"></span></div>
+  <button type="button" class="sekme" id="calis" aria-pressed="true" data-l="calis">İşler ilerlesin</button>
+  <button type="button" class="sekme" id="canli" aria-pressed="false" data-l="canli">Canlı akış</button>
+  <button type="button" class="sekme" id="gizle" aria-pressed="false" data-l="gizle">Gizli katmanları gizle</button>
+  <div class="sag" id="durumUst">–</div>
+  <div class="dil" id="dil">
+    <button type="button" class="dil-b" id="dilB" aria-haspopup="true" aria-expanded="false" aria-controls="dilM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg><span id="dilKod">TR</span><svg class="ok" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    <div class="dil-m" id="dilM" role="menu" hidden></div>
+  </div>
+</div>
+
+<div class="duzen">
+  <aside class="yan sol">
+    <h2><span data-l="gorev_ver" style="color:inherit;letter-spacing:inherit">Görev ver</span><span data-l="girdi">girdi</span></h2>
+    <label for="gorevAd" class="vh" data-l="ad_lbl">Görev adı</label>
+    <input class="ad-kutu" id="gorevAd" maxlength="60" data-lph="ad_ph" placeholder="">
+    <div class="cipler" id="hazir"></div>
+    <div class="grup"><p data-l="dep">Departman</p><div class="cipler" id="turler"></div></div>
+    <div class="grup"><p data-l="gonderen">Görevi gönderen</p><div class="cipler" id="kaynaklar"></div></div>
+    <div class="grup"><p data-l="ozellik">Özellikler</p>
+      <div class="kay"><label for="aciliyet" data-l="aciliyet">Aciliyet</label><input type="range" id="aciliyet" min="0" max="1" step="0.01"><output></output></div>
+      <div class="kay"><label for="zorluk" data-l="zorluk">Zorluk</label><input type="range" id="zorluk" min="0" max="1" step="0.01"><output></output></div>
+      <div class="kay"><label for="risk" data-l="risk">Risk</label><input type="range" id="risk" min="0" max="1" step="0.01"><output></output></div>
+      <div class="kay"><label for="uzunluk" data-l="uzunluk">Uzunluk</label><input type="range" id="uzunluk" min="0" max="1" step="0.01"><output></output></div>
+      <div class="cipler" style="margin-top:10px">
+        <button type="button" class="cip" id="yerel" aria-pressed="false" data-l="bilg">Bilgisayar gerekir</button>
+        <button type="button" class="cip" id="internet" aria-pressed="false" data-l="net">İnternet gerekir</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="orta">
+    <div class="sahne"><canvas id="c" role="img" data-lal="title"></canvas></div>
+    <div class="alt">
+      <button type="button" class="dg" id="yerlestir" data-l="yerlestir">Yeniden yerleştir</button>
+      <button type="button" class="dg" id="ekle" data-l="ekle">Nöron ekle (N)</button>
+      <button type="button" class="dg" id="sil" data-l="sil">Son nöronu sil (D)</button>
+      <button type="button" class="dg" id="katEkle" data-l="katekle">Katman ekle (L)</button>
+      <button type="button" class="dg" id="katSil" data-l="katsil">Katmanı sil (K)</button>
+      <button type="button" class="dg" id="sifir" data-l="sifir">Sıfırdan eğit</button>
+      <span id="durum"></span>
+    </div>
+  </section>
+
+  <aside class="yan sag2">
+    <h2><span data-l="kim" style="color:inherit;letter-spacing:inherit">Kim ne yapıyor</span><span data-l="cikti">çıktı</span></h2>
+    <div class="karar" id="kararKutu">
+      <small data-l="agkarar">Ağın kararı</small>
+      <div class="kim" id="kazananAd">–</div>
+      <div class="icin" id="kararIcin"></div>
+      <ul id="neden"></ul>
+      <div class="uyum" id="uyum"></div>
+      <button type="button" class="ver" id="verBtn"></button>
+    </div>
+    <ol id="liste"></ol>
+    <div class="lejant"><span data-l="leg1"></span><span data-l="leg2"></span><span data-l="leg3"></span></div>
+    <p class="not" data-l="not"></p>
+  </aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+var AGL={"tr": {"title": "Ozma Karar Ağı", "desc": "Ozma'nın yapay zekâlarına görev dağıtan, tarayıcında eğitilen canlı bir sinir ağı.", "geri": "OZMIRA'ya dön", "baslik": "Ozma Nöral Ağ", "noron": "Nöron", "calis": "İşler ilerlesin", "canli": "Canlı akış", "gizle": "Gizli katmanları gizle", "karar": "Karar", "gorev_ver": "Görev ver", "girdi": "girdi", "cikti": "çıktı", "ad_lbl": "Görev adı", "ad_ph": "Görev adı yaz (örn. Instagram postu)", "dep": "Departman", "gonderen": "Görevi gönderen", "ozellik": "Özellikler", "aciliyet": "Aciliyet", "zorluk": "Zorluk", "risk": "Risk", "uzunluk": "Uzunluk", "bilg": "Bilgisayar gerekir", "net": "İnternet gerekir", "h1": "Kilit programını çöz", "h2": "Sitede 3B giriş", "h3": "Gece güvenlik taraması", "h4": "Rakip araştırması", "h5": "Ders sunum metni", "h6": "Panelde acil hata", "d1": "Kod", "d2": "Tasarım", "d3": "Güvenlik", "d4": "Tersine müh.", "d5": "Araştırma", "d6": "Yazı", "k1": "Sen", "k2": "Blackwall", "k3": "OZMIRA sitesi", "k4": "OZMO paneli", "k5": "Telefon", "k6": "Zamanlanmış", "yerlestir": "Yeniden yerleştir", "ekle": "Nöron ekle (N)", "sil": "Son nöronu sil (D)", "katekle": "Katman ekle (L)", "katsil": "Katmanı sil (K)", "sifir": "Sıfırdan eğit", "adim": "Adım", "hata": "Hata", "dogru": "Doğru seçim", "egit": "eğitiliyor", "secili": "Seçili katman", "kim": "Kim ne yapıyor", "agkarar": "Ağın kararı", "ver": "Görevi ver", "ayni": "Kural da aynı sistemi seçiyor.", "farkli": "Kural {x} diyor; ağ farklı düşünüyor.", "isi": "{d} işi", "dep_l": "{d} departmanı", "secimin": "senin seçimin (ağ: {x})", "yuk": "yük", "is": "iş", "bosta": "boşta", "leg1": "dolu çubuk: ağın puanı", "leg2": "beyaz çizgi: kuralın puanı", "leg3": "yük: üstündeki işler", "n_dep": "departman: {d}", "n_gon": "gönderen: {k}", "n_yuk": "{s} yükü", "yuksek": "yüksek", "dusuk": "düşük", "n_bilg": "bilgisayar gerekiyor", "n_net": "internet gerekiyor", "c_giris": "Departman + Gönderen + Yük", "c_cikis": "Yapay Zekâ Başına: Uygunluk", "c_gizli": "Gizli", "c_akt": "Aktivasyon", "c_tikla": "(tıkla)", "o1": "Yıldızlı site güncellemesi", "o2": "Codex/Gemini girişi", "o3": "Haftalık güvenlik raporu", "not": "Ağın öğretmeni şimdilik elle yazılmış kurallar; her yapay zekânın hangi işte ne kadar iyi olduğu bizim tahminimiz. Ağ bu kuralları örneklerden öğrenir ve senin tarayıcında eğitilir. Açılıştaki işler örnektir."}, "en": {"title": "Ozma Decision Network", "desc": "A live neural network that hands out tasks to Ozma's AIs and trains in your browser.", "geri": "Back to OZMIRA", "baslik": "Ozma Neural Network", "noron": "Neurons", "calis": "Let work progress", "canli": "Live feed", "gizle": "Hide hidden layers", "karar": "Decision", "gorev_ver": "Give a task", "girdi": "input", "cikti": "output", "ad_lbl": "Task name", "ad_ph": "Type a task name (e.g. Instagram post)", "dep": "Department", "gonderen": "Sent by", "ozellik": "Properties", "aciliyet": "Urgency", "zorluk": "Difficulty", "risk": "Risk", "uzunluk": "Length", "bilg": "Needs the computer", "net": "Needs internet", "h1": "Crack the lock program", "h2": "3D intro for the site", "h3": "Nightly security scan", "h4": "Competitor research", "h5": "Class presentation text", "h6": "Urgent bug in the panel", "d1": "Code", "d2": "Design", "d3": "Security", "d4": "Reverse eng.", "d5": "Research", "d6": "Writing", "k1": "You", "k2": "Blackwall", "k3": "OZMIRA site", "k4": "OZMO panel", "k5": "Phone", "k6": "Scheduled", "yerlestir": "Re-layout", "ekle": "Add neuron (N)", "sil": "Remove last neuron (D)", "katekle": "Add layer (L)", "katsil": "Remove layer (K)", "sifir": "Retrain from scratch", "adim": "Step", "hata": "Error", "dogru": "Right picks", "egit": "training", "secili": "Selected layer", "kim": "Who is doing what", "agkarar": "The network's decision", "ver": "Give the task", "ayni": "The rule picks the same system.", "farkli": "The rule says {x}; the network thinks differently.", "isi": "{d} task", "dep_l": "{d} department", "secimin": "your pick (network: {x})", "yuk": "load", "is": "tasks", "bosta": "idle", "leg1": "filled bar: the network's score", "leg2": "white line: the rule's score", "leg3": "load: the tasks on it", "n_dep": "department: {d}", "n_gon": "sent by: {k}", "n_yuk": "{s} load", "yuksek": "high", "dusuk": "low", "n_bilg": "needs the computer", "n_net": "needs internet", "c_giris": "Department + Sender + Load", "c_cikis": "Per AI: Fit", "c_gizli": "Hidden", "c_akt": "Activation", "c_tikla": "(click)", "o1": "Starry site update", "o2": "Codex/Gemini sign-in", "o3": "Weekly security report", "not": "For now the network's teacher is a set of hand-written rules; how good each AI is at each kind of work is our estimate. The network learns these rules from examples and trains in your browser. The tasks shown at the start are examples."}, "de": {"title": "Ozma-Entscheidungsnetz", "desc": "Ein lebendes neuronales Netz, das Aufgaben an die KIs von Ozma verteilt und in deinem Browser trainiert.", "geri": "Zurück zu OZMIRA", "baslik": "Ozma Neuronales Netz", "noron": "Neuronen", "calis": "Arbeit läuft weiter", "canli": "Live-Feed", "gizle": "Verborgene Schichten ausblenden", "karar": "Entscheidung", "gorev_ver": "Aufgabe geben", "girdi": "Eingabe", "cikti": "Ausgabe", "ad_lbl": "Name der Aufgabe", "ad_ph": "Name der Aufgabe (z. B. Instagram-Post)", "dep": "Abteilung", "gonderen": "Gesendet von", "ozellik": "Eigenschaften", "aciliyet": "Dringlichkeit", "zorluk": "Schwierigkeit", "risk": "Risiko", "uzunluk": "Dauer", "bilg": "Braucht den Computer", "net": "Braucht Internet", "h1": "Schloss-Programm knacken", "h2": "3D-Intro für die Website", "h3": "Nächtlicher Sicherheitsscan", "h4": "Wettbewerbsanalyse", "h5": "Text für ein Referat", "h6": "Dringender Fehler im Panel", "d1": "Code", "d2": "Design", "d3": "Sicherheit", "d4": "Reverse Eng.", "d5": "Recherche", "d6": "Text", "k1": "Du", "k2": "Blackwall", "k3": "OZMIRA-Website", "k4": "OZMO-Panel", "k5": "Handy", "k6": "Geplant", "yerlestir": "Neu anordnen", "ekle": "Neuron hinzufügen (N)", "sil": "Letztes Neuron entfernen (D)", "katekle": "Schicht hinzufügen (L)", "katsil": "Schicht entfernen (K)", "sifir": "Neu trainieren", "adim": "Schritt", "hata": "Fehler", "dogru": "Richtige Wahl", "egit": "trainiert", "secili": "Gewählte Schicht", "kim": "Wer macht was", "agkarar": "Entscheidung des Netzes", "ver": "Aufgabe übergeben", "ayni": "Die Regel wählt dasselbe System.", "farkli": "Die Regel sagt {x}; das Netz sieht es anders.", "isi": "{d}-Aufgabe", "dep_l": "Abteilung {d}", "secimin": "deine Wahl (Netz: {x})", "yuk": "Last", "is": "Aufgaben", "bosta": "frei", "leg1": "gefüllter Balken: Wert des Netzes", "leg2": "weiße Linie: Wert der Regel", "leg3": "Last: Aufgaben darauf", "n_dep": "Abteilung: {d}", "n_gon": "gesendet von: {k}", "n_yuk": "Last von {s}", "yuksek": "hoch", "dusuk": "niedrig", "n_bilg": "braucht den Computer", "n_net": "braucht Internet", "c_giris": "Abteilung + Absender + Last", "c_cikis": "Pro KI: Eignung", "c_gizli": "Verborgen", "c_akt": "Aktivierung", "c_tikla": "(klicken)", "o1": "Website-Update mit Sternen", "o2": "Codex/Gemini-Anmeldung", "o3": "Wöchentlicher Sicherheitsbericht", "not": "Der Lehrer des Netzes sind vorerst handgeschriebene Regeln; wie gut jede KI in welcher Arbeit ist, ist unsere Schätzung. Das Netz lernt diese Regeln aus Beispielen und trainiert in deinem Browser. Die Aufgaben beim Start sind Beispiele."}, "es": {"title": "Red de Decisión de Ozma", "desc": "Una red neuronal en vivo que reparte tareas entre las IA de Ozma y se entrena en tu navegador.", "geri": "Volver a OZMIRA", "baslik": "Red Neuronal de Ozma", "noron": "Neuronas", "calis": "Que avance el trabajo", "canli": "Flujo en vivo", "gizle": "Ocultar capas ocultas", "karar": "Decisión", "gorev_ver": "Dar una tarea", "girdi": "entrada", "cikti": "salida", "ad_lbl": "Nombre de la tarea", "ad_ph": "Escribe un nombre (p. ej. post de Instagram)", "dep": "Departamento", "gonderen": "Enviada por", "ozellik": "Propiedades", "aciliyet": "Urgencia", "zorluk": "Dificultad", "risk": "Riesgo", "uzunluk": "Duración", "bilg": "Necesita el ordenador", "net": "Necesita internet", "h1": "Abrir el programa candado", "h2": "Intro 3D para la web", "h3": "Escaneo nocturno de seguridad", "h4": "Estudio de la competencia", "h5": "Texto para una presentación", "h6": "Error urgente en el panel", "d1": "Código", "d2": "Diseño", "d3": "Seguridad", "d4": "Ing. inversa", "d5": "Investigación", "d6": "Redacción", "k1": "Tú", "k2": "Blackwall", "k3": "Web de OZMIRA", "k4": "Panel OZMO", "k5": "Móvil", "k6": "Programada", "yerlestir": "Reordenar", "ekle": "Añadir neurona (N)", "sil": "Quitar última neurona (D)", "katekle": "Añadir capa (L)", "katsil": "Quitar capa (K)", "sifir": "Reentrenar desde cero", "adim": "Paso", "hata": "Error", "dogru": "Aciertos", "egit": "entrenando", "secili": "Capa elegida", "kim": "Quién hace qué", "agkarar": "Decisión de la red", "ver": "Dar la tarea", "ayni": "La regla elige el mismo sistema.", "farkli": "La regla dice {x}; la red piensa distinto.", "isi": "tarea de {d}", "dep_l": "departamento de {d}", "secimin": "tu elección (red: {x})", "yuk": "carga", "is": "tareas", "bosta": "libre", "leg1": "barra llena: puntuación de la red", "leg2": "línea blanca: puntuación de la regla", "leg3": "carga: tareas asignadas", "n_dep": "departamento: {d}", "n_gon": "enviada por: {k}", "n_yuk": "carga de {s}", "yuksek": "alta", "dusuk": "baja", "n_bilg": "necesita el ordenador", "n_net": "necesita internet", "c_giris": "Departamento + Remitente + Carga", "c_cikis": "Por IA: Idoneidad", "c_gizli": "Oculta", "c_akt": "Activación", "c_tikla": "(clic)", "o1": "Web con estrellas", "o2": "Acceso a Codex/Gemini", "o3": "Informe semanal de seguridad", "not": "Por ahora el profesor de la red son reglas escritas a mano; lo bien que hace cada IA cada trabajo es una estimación nuestra. La red aprende esas reglas con ejemplos y se entrena en tu navegador. Las tareas del inicio son ejemplos."}, "pt": {"title": "Rede de Decisão do Ozma", "desc": "Uma rede neural ao vivo que distribui tarefas entre as IAs do Ozma e treina no seu navegador.", "geri": "Voltar ao OZMIRA", "baslik": "Rede Neural do Ozma", "noron": "Neurônios", "calis": "Trabalho em andamento", "canli": "Fluxo ao vivo", "gizle": "Esconder camadas ocultas", "karar": "Decisão", "gorev_ver": "Dar uma tarefa", "girdi": "entrada", "cikti": "saída", "ad_lbl": "Nome da tarefa", "ad_ph": "Digite um nome (ex.: post no Instagram)", "dep": "Departamento", "gonderen": "Enviada por", "ozellik": "Propriedades", "aciliyet": "Urgência", "zorluk": "Dificuldade", "risk": "Risco", "uzunluk": "Duração", "bilg": "Precisa do computador", "net": "Precisa de internet", "h1": "Abrir o programa cadeado", "h2": "Abertura 3D do site", "h3": "Varredura de segurança noturna", "h4": "Pesquisa da concorrência", "h5": "Texto de apresentação da aula", "h6": "Erro urgente no painel", "d1": "Código", "d2": "Design", "d3": "Segurança", "d4": "Eng. reversa", "d5": "Pesquisa", "d6": "Texto", "k1": "Você", "k2": "Blackwall", "k3": "Site OZMIRA", "k4": "Painel OZMO", "k5": "Celular", "k6": "Agendada", "yerlestir": "Reorganizar", "ekle": "Adicionar neurônio (N)", "sil": "Remover último neurônio (D)", "katekle": "Adicionar camada (L)", "katsil": "Remover camada (K)", "sifir": "Treinar do zero", "adim": "Passo", "hata": "Erro", "dogru": "Acertos", "egit": "treinando", "secili": "Camada escolhida", "kim": "Quem faz o quê", "agkarar": "Decisão da rede", "ver": "Dar a tarefa", "ayni": "A regra escolhe o mesmo sistema.", "farkli": "A regra diz {x}; a rede pensa diferente.", "isi": "tarefa de {d}", "dep_l": "departamento de {d}", "secimin": "sua escolha (rede: {x})", "yuk": "carga", "is": "tarefas", "bosta": "livre", "leg1": "barra cheia: nota da rede", "leg2": "linha branca: nota da regra", "leg3": "carga: tarefas em cima dele", "n_dep": "departamento: {d}", "n_gon": "enviada por: {k}", "n_yuk": "carga de {s}", "yuksek": "alta", "dusuk": "baixa", "n_bilg": "precisa do computador", "n_net": "precisa de internet", "c_giris": "Departamento + Remetente + Carga", "c_cikis": "Por IA: Adequação", "c_gizli": "Oculta", "c_akt": "Ativação", "c_tikla": "(clique)", "o1": "Site com estrelas", "o2": "Login no Codex/Gemini", "o3": "Relatório semanal de segurança", "not": "Por enquanto o professor da rede é um conjunto de regras escritas à mão; o quanto cada IA é boa em cada trabalho é uma estimativa nossa. A rede aprende essas regras com exemplos e treina no seu navegador. As tarefas do início são exemplos."}, "ru": {"title": "Сеть решений Ozma", "desc": "Живая нейросеть, которая раздаёт задачи ИИ системы Ozma и обучается в твоём браузере.", "geri": "Назад к OZMIRA", "baslik": "Нейросеть Ozma", "noron": "Нейронов", "calis": "Работа идёт", "canli": "Живой поток", "gizle": "Скрыть скрытые слои", "karar": "Решение", "gorev_ver": "Дать задачу", "girdi": "вход", "cikti": "выход", "ad_lbl": "Название задачи", "ad_ph": "Название задачи (например, пост в Instagram)", "dep": "Отдел", "gonderen": "Отправитель", "ozellik": "Свойства", "aciliyet": "Срочность", "zorluk": "Сложность", "risk": "Риск", "uzunluk": "Длительность", "bilg": "Нужен компьютер", "net": "Нужен интернет", "h1": "Вскрыть программу-замок", "h2": "3D-заставка для сайта", "h3": "Ночная проверка безопасности", "h4": "Анализ конкурентов", "h5": "Текст для доклада", "h6": "Срочная ошибка в панели", "d1": "Код", "d2": "Дизайн", "d3": "Безопасность", "d4": "Реверс", "d5": "Исследования", "d6": "Тексты", "k1": "Ты", "k2": "Blackwall", "k3": "Сайт OZMIRA", "k4": "Панель OZMO", "k5": "Телефон", "k6": "По расписанию", "yerlestir": "Перестроить", "ekle": "Добавить нейрон (N)", "sil": "Удалить последний нейрон (D)", "katekle": "Добавить слой (L)", "katsil": "Удалить слой (K)", "sifir": "Обучить заново", "adim": "Шаг", "hata": "Ошибка", "dogru": "Верный выбор", "egit": "обучается", "secili": "Выбран слой", "kim": "Кто чем занят", "agkarar": "Решение сети", "ver": "Дать задачу", "ayni": "Правило выбирает ту же систему.", "farkli": "Правило говорит {x}; сеть считает иначе.", "isi": "задача: {d}", "dep_l": "отдел: {d}", "secimin": "твой выбор (сеть: {x})", "yuk": "загрузка", "is": "задач", "bosta": "свободен", "leg1": "заполненная полоса: оценка сети", "leg2": "белая линия: оценка правила", "leg3": "загрузка: задачи на нём", "n_dep": "отдел: {d}", "n_gon": "отправитель: {k}", "n_yuk": "загрузка {s}", "yuksek": "высокая", "dusuk": "низкая", "n_bilg": "нужен компьютер", "n_net": "нужен интернет", "c_giris": "Отдел + Отправитель + Загрузка", "c_cikis": "Для каждого ИИ: Пригодность", "c_gizli": "Скрытый", "c_akt": "Активация", "c_tikla": "(нажми)", "o1": "Обновление сайта со звёздами", "o2": "Вход в Codex/Gemini", "o3": "Еженедельный отчёт о безопасности", "not": "Пока учитель сети — правила, написанные вручную; насколько хорошо каждый ИИ справляется с каждой работой, это наша оценка. Сеть усваивает эти правила на примерах и обучается в твоём браузере. Задачи при запуске — примеры."}, "ar": {"title": "شبكة قرارات Ozma", "desc": "شبكة عصبية حيّة توزّع المهام على أنظمة الذكاء الاصطناعي في Ozma وتتدرّب في متصفحك.", "geri": "العودة إلى OZMIRA", "baslik": "شبكة Ozma العصبية", "noron": "خلية", "calis": "تقدّم العمل", "canli": "بث مباشر", "gizle": "إخفاء الطبقات المخفية", "karar": "القرار", "gorev_ver": "أعطِ مهمة", "girdi": "مدخل", "cikti": "مخرج", "ad_lbl": "اسم المهمة", "ad_ph": "اكتب اسم المهمة (مثل منشور إنستغرام)", "dep": "القسم", "gonderen": "المُرسِل", "ozellik": "الخصائص", "aciliyet": "الاستعجال", "zorluk": "الصعوبة", "risk": "الخطر", "uzunluk": "المدة", "bilg": "تحتاج الحاسوب", "net": "تحتاج الإنترنت", "h1": "افتح برنامج القفل", "h2": "مقدمة ثلاثية الأبعاد للموقع", "h3": "فحص أمني ليلي", "h4": "بحث عن المنافسين", "h5": "نص عرض تقديمي للدرس", "h6": "خطأ عاجل في اللوحة", "d1": "برمجة", "d2": "تصميم", "d3": "أمان", "d4": "هندسة عكسية", "d5": "بحث", "d6": "كتابة", "k1": "أنت", "k2": "Blackwall", "k3": "موقع OZMIRA", "k4": "لوحة OZMO", "k5": "الهاتف", "k6": "مجدولة", "yerlestir": "إعادة الترتيب", "ekle": "أضف خلية (N)", "sil": "احذف آخر خلية (D)", "katekle": "أضف طبقة (L)", "katsil": "احذف طبقة (K)", "sifir": "درّب من الصفر", "adim": "خطوة", "hata": "الخطأ", "dogru": "الاختيارات الصحيحة", "egit": "يتدرّب", "secili": "الطبقة المختارة", "kim": "من يفعل ماذا", "agkarar": "قرار الشبكة", "ver": "أعطِ المهمة", "ayni": "القاعدة تختار النظام نفسه.", "farkli": "القاعدة تقول {x}؛ والشبكة ترى غير ذلك.", "isi": "مهمة {d}", "dep_l": "قسم {d}", "secimin": "اختيارك (الشبكة: {x})", "yuk": "الحمل", "is": "مهام", "bosta": "متفرّغ", "leg1": "الشريط الممتلئ: درجة الشبكة", "leg2": "الخط الأبيض: درجة القاعدة", "leg3": "الحمل: المهام المسندة إليه", "n_dep": "القسم: {d}", "n_gon": "المُرسِل: {k}", "n_yuk": "حمل {s}", "yuksek": "مرتفع", "dusuk": "منخفض", "n_bilg": "تحتاج الحاسوب", "n_net": "تحتاج الإنترنت", "c_giris": "القسم + المرسل + الحمل", "c_cikis": "لكل ذكاء اصطناعي: الملاءمة", "c_gizli": "مخفية", "c_akt": "التنشيط", "c_tikla": "(انقر)", "o1": "تحديث الموقع بالنجوم", "o2": "تسجيل الدخول إلى Codex/Gemini", "o3": "تقرير الأمان الأسبوعي", "not": "معلّم الشبكة حاليًا قواعد مكتوبة يدويًا؛ ومدى براعة كل ذكاء اصطناعي في كل عمل هو تقديرنا. تتعلّم الشبكة هذه القواعد من الأمثلة وتتدرّب في متصفحك. المهام الظاهرة في البداية أمثلة."}, "nl": {"title": "Ozma-beslisnetwerk", "desc": "Een levend neuraal netwerk dat taken verdeelt over de AI's van Ozma en in je browser traint.", "geri": "Terug naar OZMIRA", "baslik": "Ozma Neuraal Netwerk", "noron": "Neuronen", "calis": "Werk loopt door", "canli": "Live feed", "gizle": "Verborgen lagen verbergen", "karar": "Besluit", "gorev_ver": "Geef een taak", "girdi": "invoer", "cikti": "uitvoer", "ad_lbl": "Naam van de taak", "ad_ph": "Typ een naam (bijv. Instagram-post)", "dep": "Afdeling", "gonderen": "Verstuurd door", "ozellik": "Eigenschappen", "aciliyet": "Urgentie", "zorluk": "Moeilijkheid", "risk": "Risico", "uzunluk": "Duur", "bilg": "Heeft de computer nodig", "net": "Heeft internet nodig", "h1": "Kraak het slotprogramma", "h2": "3D-intro voor de site", "h3": "Nachtelijke beveiligingsscan", "h4": "Concurrentieonderzoek", "h5": "Tekst voor een presentatie", "h6": "Dringende fout in het paneel", "d1": "Code", "d2": "Ontwerp", "d3": "Beveiliging", "d4": "Reverse eng.", "d5": "Onderzoek", "d6": "Tekst", "k1": "Jij", "k2": "Blackwall", "k3": "OZMIRA-site", "k4": "OZMO-paneel", "k5": "Telefoon", "k6": "Gepland", "yerlestir": "Opnieuw schikken", "ekle": "Neuron toevoegen (N)", "sil": "Laatste neuron weg (D)", "katekle": "Laag toevoegen (L)", "katsil": "Laag verwijderen (K)", "sifir": "Opnieuw trainen", "adim": "Stap", "hata": "Fout", "dogru": "Juiste keuzes", "egit": "traint", "secili": "Gekozen laag", "kim": "Wie doet wat", "agkarar": "Besluit van het netwerk", "ver": "Geef de taak", "ayni": "De regel kiest hetzelfde systeem.", "farkli": "De regel zegt {x}; het netwerk denkt anders.", "isi": "{d}-taak", "dep_l": "afdeling {d}", "secimin": "jouw keuze (netwerk: {x})", "yuk": "belasting", "is": "taken", "bosta": "vrij", "leg1": "gevulde balk: score van het netwerk", "leg2": "witte lijn: score van de regel", "leg3": "belasting: taken erop", "n_dep": "afdeling: {d}", "n_gon": "verstuurd door: {k}", "n_yuk": "belasting van {s}", "yuksek": "hoog", "dusuk": "laag", "n_bilg": "heeft de computer nodig", "n_net": "heeft internet nodig", "c_giris": "Afdeling + Afzender + Belasting", "c_cikis": "Per AI: Geschiktheid", "c_gizli": "Verborgen", "c_akt": "Activatie", "c_tikla": "(klik)", "o1": "Site-update met sterren", "o2": "Inloggen bij Codex/Gemini", "o3": "Wekelijks beveiligingsrapport", "not": "Voorlopig is de leraar van het netwerk een set handgeschreven regels; hoe goed elke AI in elk werk is, is onze schatting. Het netwerk leert die regels uit voorbeelden en traint in je browser. De taken bij de start zijn voorbeelden."}, "it": {"title": "Rete Decisionale di Ozma", "desc": "Una rete neurale dal vivo che distribuisce compiti alle IA di Ozma e si allena nel tuo browser.", "geri": "Torna a OZMIRA", "baslik": "Rete Neurale di Ozma", "noron": "Neuroni", "calis": "Il lavoro avanza", "canli": "Flusso dal vivo", "gizle": "Nascondi i livelli nascosti", "karar": "Decisione", "gorev_ver": "Dai un compito", "girdi": "input", "cikti": "output", "ad_lbl": "Nome del compito", "ad_ph": "Scrivi un nome (es. post su Instagram)", "dep": "Reparto", "gonderen": "Inviato da", "ozellik": "Proprietà", "aciliyet": "Urgenza", "zorluk": "Difficoltà", "risk": "Rischio", "uzunluk": "Durata", "bilg": "Serve il computer", "net": "Serve internet", "h1": "Apri il programma lucchetto", "h2": "Intro 3D per il sito", "h3": "Scansione di sicurezza notturna", "h4": "Analisi dei concorrenti", "h5": "Testo per una presentazione", "h6": "Errore urgente nel pannello", "d1": "Codice", "d2": "Design", "d3": "Sicurezza", "d4": "Reverse eng.", "d5": "Ricerca", "d6": "Scrittura", "k1": "Tu", "k2": "Blackwall", "k3": "Sito OZMIRA", "k4": "Pannello OZMO", "k5": "Telefono", "k6": "Programmato", "yerlestir": "Riorganizza", "ekle": "Aggiungi neurone (N)", "sil": "Togli l'ultimo neurone (D)", "katekle": "Aggiungi livello (L)", "katsil": "Togli livello (K)", "sifir": "Riallena da zero", "adim": "Passo", "hata": "Errore", "dogru": "Scelte giuste", "egit": "in allenamento", "secili": "Livello scelto", "kim": "Chi fa cosa", "agkarar": "Decisione della rete", "ver": "Assegna il compito", "ayni": "La regola sceglie lo stesso sistema.", "farkli": "La regola dice {x}; la rete la pensa diversamente.", "isi": "compito di {d}", "dep_l": "reparto {d}", "secimin": "la tua scelta (rete: {x})", "yuk": "carico", "is": "compiti", "bosta": "libero", "leg1": "barra piena: punteggio della rete", "leg2": "linea bianca: punteggio della regola", "leg3": "carico: compiti assegnati", "n_dep": "reparto: {d}", "n_gon": "inviato da: {k}", "n_yuk": "carico di {s}", "yuksek": "alta", "dusuk": "bassa", "n_bilg": "serve il computer", "n_net": "serve internet", "c_giris": "Reparto + Mittente + Carico", "c_cikis": "Per IA: Idoneità", "c_gizli": "Nascosto", "c_akt": "Attivazione", "c_tikla": "(clicca)", "o1": "Aggiornamento del sito con le stelle", "o2": "Accesso a Codex/Gemini", "o3": "Report di sicurezza settimanale", "not": "Per ora l'insegnante della rete è un insieme di regole scritte a mano; quanto ogni IA è brava in ogni lavoro è una nostra stima. La rete impara queste regole dagli esempi e si allena nel tuo browser. I compiti all'avvio sono esempi."}, "fr": {"title": "Réseau de décision Ozma", "desc": "Un réseau de neurones vivant qui répartit les tâches entre les IA d'Ozma et s'entraîne dans ton navigateur.", "geri": "Retour à OZMIRA", "baslik": "Réseau neuronal Ozma", "noron": "Neurones", "calis": "Le travail avance", "canli": "Flux en direct", "gizle": "Masquer les couches cachées", "karar": "Décision", "gorev_ver": "Donner une tâche", "girdi": "entrée", "cikti": "sortie", "ad_lbl": "Nom de la tâche", "ad_ph": "Tape un nom (ex. post Instagram)", "dep": "Département", "gonderen": "Envoyée par", "ozellik": "Propriétés", "aciliyet": "Urgence", "zorluk": "Difficulté", "risk": "Risque", "uzunluk": "Durée", "bilg": "Besoin de l'ordinateur", "net": "Besoin d'internet", "h1": "Ouvrir le programme cadenas", "h2": "Intro 3D pour le site", "h3": "Analyse de sécurité nocturne", "h4": "Étude de la concurrence", "h5": "Texte d'exposé", "h6": "Bug urgent dans le panneau", "d1": "Code", "d2": "Design", "d3": "Sécurité", "d4": "Rétro-ingé.", "d5": "Recherche", "d6": "Rédaction", "k1": "Toi", "k2": "Blackwall", "k3": "Site OZMIRA", "k4": "Panneau OZMO", "k5": "Téléphone", "k6": "Planifiée", "yerlestir": "Réorganiser", "ekle": "Ajouter un neurone (N)", "sil": "Retirer le dernier neurone (D)", "katekle": "Ajouter une couche (L)", "katsil": "Retirer la couche (K)", "sifir": "Réentraîner de zéro", "adim": "Étape", "hata": "Erreur", "dogru": "Bons choix", "egit": "entraînement", "secili": "Couche choisie", "kim": "Qui fait quoi", "agkarar": "Décision du réseau", "ver": "Confier la tâche", "ayni": "La règle choisit le même système.", "farkli": "La règle dit {x} ; le réseau pense autrement.", "isi": "tâche {d}", "dep_l": "département {d}", "secimin": "ton choix (réseau : {x})", "yuk": "charge", "is": "tâches", "bosta": "libre", "leg1": "barre pleine : score du réseau", "leg2": "ligne blanche : score de la règle", "leg3": "charge : tâches en cours", "n_dep": "département : {d}", "n_gon": "envoyée par : {k}", "n_yuk": "charge de {s}", "yuksek": "haute", "dusuk": "basse", "n_bilg": "besoin de l'ordinateur", "n_net": "besoin d'internet", "c_giris": "Département + Expéditeur + Charge", "c_cikis": "Par IA : Adéquation", "c_gizli": "Cachée", "c_akt": "Activation", "c_tikla": "(clique)", "o1": "Mise à jour du site étoilé", "o2": "Connexion à Codex/Gemini", "o3": "Rapport de sécurité hebdomadaire", "not": "Pour l'instant, le professeur du réseau est un ensemble de règles écrites à la main ; le niveau de chaque IA dans chaque travail est notre estimation. Le réseau apprend ces règles à partir d'exemples et s'entraîne dans ton navigateur. Les tâches affichées au départ sont des exemples."}};
+var LANGS=['tr','en','de','es','pt','ru','ar','nl','it','fr'];
+var ADLAR={tr:'Türkçe',en:'English',de:'Deutsch',es:'Español',pt:'Português',ru:'Русский',ar:'العربية',nl:'Nederlands',it:'Italiano',fr:'Français'};
+var LANG=(function(){var s=null;try{s=localStorage.getItem('ozmira-site-dil');}catch(_){}if(LANGS.indexOf(s)>=0)return s;
+  var n=((navigator.languages&&navigator.languages[0])||navigator.language||'en').slice(0,2).toLowerCase();return LANGS.indexOf(n)>=0?n:'en';})();
+function L(k,v){var s=(AGL[LANG]&&AGL[LANG][k])||AGL.en[k]||AGL.tr[k]||k;if(v)for(var p in v)s=s.split('{'+p+'}').join(v[p]);return s;}
+
+// ---------- Ozma: departmanlar ve yapay zekâlar ----------
+var DEP_RENK=['#3DB8FF','#FF7AC6','#FF5C5C','#FFD23D','#54E39A','#B79CFF'];
+function depAd(i){return L('d'+(i+1));}
+function kayAd(i){return L('k'+(i+1));}
+var SIS=[
+ {ad:'Claude Code',     kod:'ClaudeCode',     renk:'#E8845A',yerel:1,  net:1,  guc:.92,hiz:.6, guven:.8,  beceri:[.95,.6,.7,.75,.6,.6]},
+ {ad:'Claude Cloud',    kod:'ClaudeCloud',    renk:'#F7C29A',yerel:.35,net:1,  guc:.9, hiz:.75,guven:.85, beceri:[.75,.85,.55,.45,.92,.92]},
+ {ad:'ChatGPT / Codex', kod:'ChatGPT_Codex',  renk:'#19C9A6',yerel:1,  net:.6, guc:.8, hiz:.75,guven:.55, beceri:[.9,.45,.45,.5,.55,.65]},
+ {ad:'Gemini',          kod:'Gemini',         renk:'#7C9BFF',yerel:1,  net:1,  guc:.75,hiz:.85,guven:.6,  beceri:[.7,.6,.4,.3,.88,.7]},
+ {ad:'Tasarım Avcısı',  kod:'TasarimAvcisi',  renk:'#FF52D9',yerel:.6, net:1,  guc:.6, hiz:.6, guven:.9,  beceri:[.3,.96,.1,.1,.7,.45]},
+ {ad:'Skill Avcısı',    kod:'SkillAvcisi',    renk:'#C084FC',yerel:.6, net:1,  guc:.6, hiz:.7, guven:.9,  beceri:[.45,.3,.55,.25,.9,.35]},
+ {ad:'Tersine Mühendis',kod:'TersineMuhendis',renk:'#F3B84B',yerel:1,  net:.3, guc:.88,hiz:.4, guven:.95, beceri:[.6,.1,.8,.97,.4,.3]},
+ {ad:'Güvenlik Kontrol',kod:'GuvenlikKontrol',renk:'#FF4D6D',yerel:1,  net:.4, guc:.7, hiz:.55,guven:1,   beceri:[.3,.05,.96,.55,.35,.2]}
+];
+var EGILIM=[[0,.08,0,0,0,0,0,0],[.12,0,0,0,0,0,0,0],[0,.04,0,0,.12,0,0,0],[.1,0,0,0,0,0,0,.04],[0,.12,0,0,0,0,0,0],[0,0,0,.04,.06,.1,0,.08]];
+var NS=SIS.length,NT=6,NK=6,NIN=NT+6+NK+NS;
+var GIRDI_AD=['Dep_CODE','Dep_DESIGN','Dep_SECURITY','Dep_REVERSE','Dep_RESEARCH','Dep_WRITING',
+  'Urgency','Difficulty','Risk','NeedsPC','NeedsNet','Length',
+  'Src_YOU','Src_BLACKWALL','Src_OZMIRA','Src_OZMO','Src_PHONE','Src_SCHEDULED',
+  'Load_CLAUDE_CODE','Load_CLAUDE_CLOUD','Load_CODEX','Load_GEMINI','Load_DESIGN_HUNT','Load_SKILL_HUNT','Load_REVERSE','Load_SECURITY'];
+function etiket(i){
+  if(i<NT)return L('n_dep',{d:depAd(i)});
+  if(i<NT+6)return [L('aciliyet'),L('zorluk'),L('risk'),L('n_bilg'),L('n_net'),L('uzunluk')][i-NT];
+  if(i<NT+6+NK)return L('n_gon',{k:kayAd(i-NT-6)});
+  return L('n_yuk',{s:SIS[i-NT-6-NK].ad});
+}
+function girdiRengi(i){return i<NT?DEP_RENK[i]:i>=NT+6+NK?SIS[i-NT-6-NK].renk:null;}
+
+function k01(v){return v<0?0:v>1?1:v;}
+function say(v){return (Math.abs(v)<.005?0:v).toFixed(2);}
+function girdi(g,dol){var x=new Float32Array(NIN);x[g.tur]=1;x[NT]=g.aciliyet;x[NT+1]=g.zorluk;x[NT+2]=g.risk;x[NT+3]=g.yerel;x[NT+4]=g.internet;x[NT+5]=g.uzunluk;
+  x[NT+6+g.kaynak]=1;for(var s=0;s<NS;s++)x[NT+6+NK+s]=dol[s];return x;}
+function gorevCoz(x){var t=0,k=0,i;for(i=0;i<NT;i++)if(x[i]>x[t])t=i;for(i=0;i<NK;i++)if(x[NT+6+i]>x[NT+6+k])k=i;
+  return {tur:t,kaynak:k,aciliyet:x[NT],zorluk:x[NT+1],risk:x[NT+2],yerel:x[NT+3]>.5?1:0,internet:x[NT+4]>.5?1:0,uzunluk:x[NT+5]};}
+function ogretmen(g,dol){var y=new Float32Array(NS);
+  for(var s=0;s<NS;s++){var p=SIS[s];var b=p.beceri[g.tur]-g.zorluk*(1-p.guc)*.8-g.yerel*(1-p.yerel)*.7-g.internet*(1-p.net)*.6-dol[s]*.35;
+    var r=g.risk*(1-p.guven)*1.2,su=g.uzunluk*(1.15-p.hiz)+dol[s]*.4;y[s]=k01(b-.6*r-su*(.1+.5*g.aciliyet)+EGILIM[g.kaynak][s]+.15);}
+  return y;}
+function rGorev(){return {tur:Math.floor(Math.random()*NT),kaynak:Math.floor(Math.random()*NK),aciliyet:Math.random(),zorluk:Math.random(),risk:Math.random(),yerel:Math.random()<.4?1:0,internet:Math.random()<.5?1:0,uzunluk:Math.random()};}
+function rDol(){var d=new Float32Array(NS);for(var s=0;s<NS;s++)d[s]=Math.random()*Math.random();return d;}
+function enB(a){var e=0;for(var i=1;i<a.length;i++)if(a[i]>a[e])e=i;return e;}
+
+// ---------- ağ ----------
+var S=[NIN,48,36,31,21,NS],ACT=[null,'ReLU','ReLU','ReLU','ReLU','Linear'],AKT_SIRA=['ReLU','Tanh','Sigmoid','Linear'];
+var W=[],B=[],mW=[],vW=[],mB=[],vB=[],gW=[],gB=[],tAdam=0,adim=0;
+function randn(){var u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function kur(eW,eB,eS){
+  for(var l=0;l<S.length-1;l++){var ni=S[l],no=S[l+1],o=ACT[l+1]==='ReLU'?Math.sqrt(2/ni):Math.sqrt(1/ni);
+    W[l]=new Float32Array(ni*no);B[l]=new Float32Array(no);
+    for(var j=0;j<no;j++)for(var i=0;i<ni;i++){var kp=eW&&eW[l]&&j<eS[l+1]&&i<eS[l];W[l][j*ni+i]=kp?eW[l][j*eS[l]+i]:randn()*o*(eW?.5:1);}
+    if(eB&&eB[l])for(j=0;j<Math.min(no,eS[l+1]);j++)B[l][j]=eB[l][j];
+    mW[l]=new Float32Array(ni*no);vW[l]=new Float32Array(ni*no);gW[l]=new Float32Array(ni*no);mB[l]=new Float32Array(no);vB[l]=new Float32Array(no);gB[l]=new Float32Array(no);}
+  W.length=B.length=S.length-1;tAdam=0;
+}
+function f(n,s){return n==='ReLU'?(s>0?s:0):n==='Tanh'?Math.tanh(s):n==='Sigmoid'?1/(1+Math.exp(-s)):s;}
+function df(n,a){return n==='ReLU'?(a>0?1:0):n==='Tanh'?1-a*a:n==='Sigmoid'?a*(1-a):1;}
+function ileri(x){var a=[x],cur=x;for(var l=0;l<S.length-1;l++){var ni=S[l],no=S[l+1],w=W[l],b=B[l],o=new Float32Array(no),fn=ACT[l+1];
+  for(var j=0;j<no;j++){var s=b[j],r=j*ni;for(var i=0;i<ni;i++)s+=w[r+i]*cur[i];o[j]=f(fn,s);}a.push(o);cur=o;}return a;}
+var PAKET=32,OGR=.003,B1=.9,B2=.999;
+function egitAdim(){
+  var L_=S.length-1,l,k,kayip=0;for(l=0;l<L_;l++){gW[l].fill(0);gB[l].fill(0);}
+  for(var n=0;n<PAKET;n++){var g=rGorev(),d=rDol(),a=ileri(girdi(g,d)),y=ogretmen(g,d),cik=a[L_],del=new Float32Array(NS);
+    for(k=0;k<NS;k++){var e=cik[k]-y[k];kayip+=e*e;del[k]=2*e/(NS*PAKET)*df(ACT[L_],cik[k]);}
+    for(l=L_-1;l>=0;l--){var ni=S[l],no=S[l+1],ain=a[l],w=W[l],gw=gW[l],gb=gB[l],onc=l>0?new Float32Array(ni):null;
+      for(var j=0;j<no;j++){var dj=del[j];if(dj===0)continue;gb[j]+=dj;var r=j*ni;for(var i=0;i<ni;i++){gw[r+i]+=dj*ain[i];if(onc)onc[i]+=w[r+i]*dj;}}
+      if(onc){var fn=ACT[l];for(i=0;i<ni;i++)onc[i]*=df(fn,ain[i]);del=onc;}}}
+  tAdam++;adim++;var c1=1-Math.pow(B1,tAdam),c2=1-Math.pow(B2,tAdam),lr=OGR*Math.sqrt(c2)/c1;
+  for(l=0;l<L_;l++){var ww=W[l],m=mW[l],v=vW[l],gg=gW[l];for(k=0;k<ww.length;k++){m[k]=B1*m[k]+(1-B1)*gg[k];v[k]=B2*v[k]+(1-B2)*gg[k]*gg[k];ww[k]-=lr*m[k]/(Math.sqrt(v[k])+1e-8);}
+    var bb=B[l],mb=mB[l],vb=vB[l],g2=gB[l];for(k=0;k<bb.length;k++){mb[k]=B1*mb[k]+(1-B1)*g2[k];vb[k]=B2*vb[k]+(1-B2)*g2[k]*g2[k];bb[k]-=lr*mb[k]/(Math.sqrt(vb[k])+1e-8);}}
+  return kayip/(NS*PAKET);
+}
+var DOG=[];for(var vi=0;vi<400;vi++){var vg=rGorev(),vd=rDol();DOG.push({x:girdi(vg,vd),h:enB(ogretmen(vg,vd))});}
+function dogruluk(){var t=0;for(var n=0;n<DOG.length;n++)if(enB(ileri(DOG[n].x)[S.length-1])===DOG[n].h)t++;return t/DOG.length;}
+
+// ---------- görevler ve iş kuyruğu ----------
+var HAZIR=[
+ {tur:3,kaynak:0,aciliyet:.4,zorluk:.5,risk:.3,yerel:1,internet:0,uzunluk:.4},
+ {tur:1,kaynak:2,aciliyet:.5,zorluk:.7,risk:.1,yerel:0,internet:1,uzunluk:.7},
+ {tur:2,kaynak:5,aciliyet:.6,zorluk:.4,risk:.85,yerel:1,internet:0,uzunluk:.5},
+ {tur:4,kaynak:4,aciliyet:.3,zorluk:.4,risk:.1,yerel:0,internet:1,uzunluk:.6},
+ {tur:5,kaynak:0,aciliyet:.8,zorluk:.3,risk:0,yerel:0,internet:0,uzunluk:.4},
+ {tur:0,kaynak:3,aciliyet:1,zorluk:.6,risk:.4,yerel:1,internet:0,uzunluk:.3}
+];
+var gorev=JSON.parse(JSON.stringify(HAZIR[0])),hazirNo=0,ozelAd='';
+function gorevAdi(){return hazirNo>=0?L('h'+(hazirNo+1)):ozelAd;}
+var isler=SIS.map(function(){return [];});
+isler[0].push({lk:'o1',tur:1,yuk:.45,ilerleme:.55});
+isler[3].push({lk:'o2',tur:0,yuk:.25,ilerleme:.2});
+isler[7].push({lk:'o3',tur:2,yuk:.3,ilerleme:.7});
+function isAdi(w){return w.lk?L(w.lk):w.ad;}
+function doluluk(){var d=new Float32Array(NS);for(var s=0;s<NS;s++){var t=0;isler[s].forEach(function(w){t+=w.yuk*(1-w.ilerleme);});d[s]=k01(t);}return d;}
+function isYuku(g){return .25+.35*g.uzunluk+.2*g.zorluk;}
+
+// ---------- durum ----------
+var azalt=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var canli=false,gizli=false,calis=!azalt,secKatman=1,gosterilen=-1,sabit=false;
+var xSimdi=girdi(gorev,doluluk()),akt=null,kaz=0;
+var egitiliyor=true,kayipEma=null,dogr=null,HEDEF=9000;
+var GECMIS=90,gecmis=[],gecmisUc=0;for(var hi=0;hi<NIN;hi++)gecmis.push(new Float32Array(GECMIS));
+var faz=[],hiz=[];for(hi=0;hi<NIN;hi++){faz.push(Math.random()*6.28);hiz.push(.9+Math.random()*1.4);}
+function canliGirdi(t){var x=new Float32Array(NIN),i,s=[3,1,2,4,0,5],k=[0,2,5,1,4,3];
+  x[s[Math.floor(t/4.5)%NT]]=1;x[NT+6+k[Math.floor(t/6.1)%NK]]=1;
+  [NT,NT+1,NT+2,NT+5].forEach(function(idx){x[idx]=.5+.45*Math.sin(t*hiz[idx]+faz[idx]);});
+  x[NT+3]=Math.sin(t*.55+faz[NT+3])>0?1:0;x[NT+4]=Math.sin(t*.42+faz[NT+4])>0?1:0;
+  for(i=0;i<NS;i++){var q=NT+6+NK+i;x[q]=.28+.24*Math.sin(t*hiz[q]*.6+faz[q]);}return x;}
+
+function $(id){return document.getElementById(id);}
+function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+
+// ---------- sol panel ----------
+HAZIR.forEach(function(h,i){var b=el('button','cip');b.type='button';b.style.setProperty('--r',DEP_RENK[h.tur]);b.appendChild(el('i'));b.appendChild(el('span'));
+  b.onclick=function(){gorev=JSON.parse(JSON.stringify(h));hazirNo=i;$('gorevAd').value=gorevAdi();sabit=false;girdiDegisti();};$('hazir').appendChild(b);});
+DEP_RENK.forEach(function(r,i){var b=el('button','cip');b.type='button';b.style.setProperty('--r',r);b.appendChild(el('i'));b.appendChild(el('span'));
+  b.onclick=function(){gorev.tur=i;hazirNo=-1;sabit=false;girdiDegisti();};$('turler').appendChild(b);});
+for(var ki=0;ki<6;ki++)(function(i){var b=el('button','cip');b.type='button';b.appendChild(el('span'));b.onclick=function(){gorev.kaynak=i;hazirNo=-1;sabit=false;girdiDegisti();};$('kaynaklar').appendChild(b);})(ki);
+['aciliyet','zorluk','risk','uzunluk'].forEach(function(k){$(k).addEventListener('input',function(e){gorev[k]=+e.target.value;hazirNo=-1;if(!ozelAd)ozelAd=$('gorevAd').value;sabit=false;girdiDegisti();});});
+['yerel','internet'].forEach(function(k){$(k).onclick=function(){gorev[k]=gorev[k]?0:1;hazirNo=-1;if(!ozelAd)ozelAd=$('gorevAd').value;sabit=false;girdiDegisti();};});
+$('gorevAd').addEventListener('input',function(e){ozelAd=e.target.value.trim();hazirNo=-1;formu();});
+function formu(){
+  [].forEach.call($('hazir').children,function(b,i){b.setAttribute('aria-pressed',i===hazirNo);b.lastChild.textContent=L('h'+(i+1));});
+  [].forEach.call($('turler').children,function(b,i){b.setAttribute('aria-pressed',i===gorev.tur);b.lastChild.textContent=depAd(i);});
+  [].forEach.call($('kaynaklar').children,function(b,i){b.setAttribute('aria-pressed',i===gorev.kaynak);b.lastChild.textContent=kayAd(i);});
+  ['aciliyet','zorluk','risk','uzunluk'].forEach(function(k){var inp=$(k);inp.value=gorev[k];inp.style.setProperty('--d',gorev[k]*100+'%');inp.parentNode.querySelector('output').textContent=(+gorev[k]).toFixed(2);});
+  ['yerel','internet'].forEach(function(k){$(k).setAttribute('aria-pressed',!!gorev[k]);});
+}
+function girdiDegisti(){if(canli)canliAyarla(false);formu();kararPanel();}
+
+// ---------- sağ panel ----------
+var satir=[];
+SIS.forEach(function(s,i){
+  var li=el('li');li.style.setProperty('--r',s.renk);li.tabIndex=0;li.setAttribute('role','button');
+  var r1=el('div','r1'),ad=el('span','ad'),sira=el('span','sira'),puan=el('span','puan','–');ad.appendChild(sira);ad.appendChild(document.createTextNode(s.ad));r1.appendChild(ad);r1.appendChild(puan);
+  var cub=el('div','cub'),dolu=el('i'),cz=el('b');cub.appendChild(dolu);cub.appendChild(cz);
+  var r2=el('div','r2'),yk=el('span'),ik=el('span');r2.appendChild(yk);r2.appendChild(ik);
+  var isK=el('div','isler');
+  li.appendChild(r1);li.appendChild(cub);li.appendChild(r2);li.appendChild(isK);
+  function sec(){if(gosterilen===i&&sabit)sabit=false;else{gosterilen=i;sabit=true;}kararPanel();}
+  li.onclick=sec;li.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();sec();}};
+  $('liste').appendChild(li);satir.push({li:li,puan:puan,dolu:dolu,cz:cz,sira:sira,yk:yk,ik:ik,isK:isK});
+});
+$('verBtn').onclick=function(){
+  if(canli)canliAyarla(false);
+  var hedef=gosterilen>=0?gosterilen:kaz,w={tur:gorev.tur,yuk:isYuku(gorev),ilerleme:0};
+  if(hazirNo>=0)w.lk='h'+(hazirNo+1);else w.ad=ozelAd||L('isi',{d:depAd(gorev.tur)});
+  isler[hedef].push(w);sabit=false;kararPanel();
+};
+function kacis(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function isleriCiz(){
+  var d=doluluk();
+  satir.forEach(function(r,i){
+    r.yk.textContent=L('yuk')+' '+Math.round(d[i]*100)+'%';
+    r.ik.textContent=isler[i].length?isler[i].length+' '+L('is'):L('bosta');
+    var html='';
+    isler[i].forEach(function(w){html+='<div class="is" style="--d:'+DEP_RENK[w.tur]+'"><i></i><span>'+kacis(isAdi(w))+'</span><em>'+Math.round(w.ilerleme*100)+'%</em><div class="ilerle"><u style="width:'+(w.ilerleme*100)+'%"></u></div></div>';});
+    if(r.isK.innerHTML!==html)r.isK.innerHTML=html;
+  });
+}
+function etkiler(x,hedef){
+  var taban=ileri(x)[S.length-1][hedef],L_=S.length-1,e=[];
+  function grupOrt(bas,adet){var sec=0;for(var k=0;k<adet;k++)if(x[bas+k]>x[bas+sec])sec=k;var t=0;
+    for(k=0;k<adet;k++){if(k===sec)continue;var x2=new Float32Array(x);x2[bas+sec]=0;x2[bas+k]=1;t+=ileri(x2)[L_][hedef];}return [taban-t/(adet-1),bas+sec];}
+  e.push(grupOrt(0,NT));e.push(grupOrt(NT+6,NK));
+  for(var i=NT;i<NT+6;i++){var x2=new Float32Array(x);if(i===NT+3||i===NT+4){if(x[i]<.5)continue;x2[i]=0;}else x2[i]=.5;e.push([taban-ileri(x2)[L_][hedef],i]);}
+  for(i=NT+6+NK;i<NIN;i++){var x3=new Float32Array(x);x3[i]=.15;e.push([taban-ileri(x3)[L_][hedef],i]);}
+  e.sort(function(a,b){return Math.abs(b[0])-Math.abs(a[0]);});return e.slice(0,3);
+}
+function neden(i,x){
+  if(i>=NT&&i<NT+6&&i!==NT+3&&i!==NT+4)return etiket(i)+': '+(x[i]>=.5?L('yuksek'):L('dusuk'));
+  if(i>=NT+6+NK)return etiket(i)+' '+Math.round(x[i]*100)+'%';
+  return etiket(i);
+}
+function kararPanel(){
+  if(!akt)return;
+  var L_=S.length-1,cik=akt[L_],g=gorevCoz(xSimdi),dl=xSimdi.slice(NT+6+NK),ogr=ogretmen(g,dl);
+  kaz=enB(cik);if(!sabit)gosterilen=kaz;
+  var srl=Array.prototype.map.call(cik,function(v,i){return [v,i];}).sort(function(a,b){return b[0]-a[0];}),sira={};srl.forEach(function(p,r){sira[p[1]]=r+1;});
+  satir.forEach(function(r,i){var v=cik[i];r.puan.textContent=say(v);r.dolu.style.width=k01(v)*100+'%';r.cz.style.left='calc('+k01(ogr[i])*100+'% - 1px)';
+    r.sira.textContent=sira[i]+'.';r.li.classList.toggle('kazanan',i===kaz);r.li.classList.toggle('gosterilen',i===gosterilen);r.li.setAttribute('aria-pressed',i===gosterilen);});
+  var hedef=gosterilen,k=$('kararKutu');k.style.setProperty('--r',SIS[hedef].renk);
+  $('kazananAd').textContent=SIS[hedef].ad;
+  var ad=canli?L('canli'):(gorevAdi()||L('isi',{d:depAd(g.tur)}));
+  $('kararIcin').textContent=ad+' · '+L('dep_l',{d:depAd(g.tur)})+(hedef!==kaz?' · '+L('secimin',{x:SIS[kaz].ad}):'');
+  var ul=$('neden');ul.innerHTML='';
+  etkiler(xSimdi,hedef).forEach(function(e){var li=el('li');li.appendChild(el('b',e[0]>=0?'art':'eks',(e[0]>=0?'+':'−')+Math.abs(e[0]).toFixed(2)));li.appendChild(document.createTextNode('  '+neden(e[1],xSimdi)));ul.appendChild(li);});
+  var kural=enB(ogr);$('uyum').textContent=kural===kaz?L('ayni'):L('farkli',{x:SIS[kural].ad});
+  $('verBtn').textContent=L('ver')+' → '+SIS[hedef].ad;
+  $('durumUst').innerHTML=kacis(L('karar'))+': <span style="color:'+SIS[kaz].renk+'">'+kacis(SIS[kaz].ad)+'</span>';
+  isleriCiz();
+}
+
+// ---------- yerleşim ----------
+var cv=$('c'),cx=cv.getContext('2d'),V={w:0,h:0,dpr:1},kam={s:1,x:0,y:0},D={panel:[],dugum:[],dunyaW:0,dunyaH:0};
+var PW_GIR=360,PW_GIZ=175,PW_CIK=300,ARA=64,UST=118,ALT=50;
+function yerlesim(){
+  var gor=[];for(var l=0;l<S.length;l++)if(!gizli||l===0||l===S.length-1)gor.push(l);
+  var enCok=0;gor.forEach(function(l){if(S[l]>enCok)enCok=S[l];});
+  var acik=Math.max(760,(enCok-1)*19),H=UST+acik+ALT,x=0;D.panel=[];D.dugum=[];
+  gor.forEach(function(l,k){var w=l===0?PW_GIR:l===S.length-1?PW_CIK:PW_GIZ;if(gizli&&k===1)x+=200;
+    D.panel.push({l:l,x:x,y:0,w:w,h:H});
+    var n=S[l],a=l===S.length-1?Math.min(acik,(n-1)*62):l===0?acik:Math.min(acik,(n-1)*19+(n<30?120:0));
+    var y0=UST+(acik-a)/2,dy=n>1?a/(n-1):0,nx=l===0?x+w-28:x+34,p=[];for(var i=0;i<n;i++)p.push([nx,y0+i*dy]);D.dugum[l]=p;x+=w+ARA;});
+  D.dunyaW=x-ARA;D.dunyaH=H;
+}
+function sigdir(){if(!V.w)return;var s=Math.min((V.w-20)/D.dunyaW,(V.h-20)/D.dunyaH);kam.s=s;kam.x=(V.w-D.dunyaW*s)/2;kam.y=(V.h-D.dunyaH*s)/2;}
+function boyutla(){V.dpr=Math.min(window.devicePixelRatio||1,2);V.w=cv.clientWidth;V.h=cv.clientHeight;if(!V.w||!V.h)return;cv.width=Math.round(V.w*V.dpr);cv.height=Math.round(V.h*V.dpr);}
+
+// ---------- çizim ----------
+var FONT='"JetBrains Mono",Consolas,"Cascadia Mono",Menlo,monospace';
+function hexRgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+var DEP_RGB=DEP_RENK.map(hexRgb),SIS_RGB=SIS.map(function(s){return hexRgb(s.renk);});
+var J=null;
+function etkiHesapla(x){var L_=S.length-1,taban=ileri(x)[L_],m=[];
+  for(var i=0;i<NIN;i++){var x2=new Float32Array(x);x2[i]=x2[i]>.5?x2[i]-.5:x2[i]+.5;var o=ileri(x2)[L_],sat=new Float32Array(NS);for(var k=0;k<NS;k++)sat[k]=(taban[k]-o[k])*(x[i]>.5?1:-1)/.5;m.push(sat);}return m;}
+function bez(p,x0,y0,x1,y1){var mx=(x0+x1)/2;p.moveTo(x0,y0);p.bezierCurveTo(mx,y0,mx,y1,x1,y1);}
+function rgba(c,a){return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';}
+function ciz(){
+  if(!V.w||!akt)return;var c=cx,L_=S.length-1,i,j;
+  c.setTransform(V.dpr,0,0,V.dpr,0,0);
+  var g=c.createRadialGradient(V.w*.55,V.h*.45,0,V.w*.55,V.h*.45,Math.max(V.w,V.h)*.75);g.addColorStop(0,'#0A1450');g.addColorStop(.55,'#050B2E');g.addColorStop(1,'#02040F');
+  c.fillStyle=g;c.fillRect(0,0,V.w,V.h);
+  c.setTransform(V.dpr*kam.s,0,0,V.dpr*kam.s,V.dpr*kam.x,V.dpr*kam.y);var px=1/kam.s;
+  D.panel.forEach(function(p){c.fillStyle='rgba(6,12,44,.35)';c.fillRect(p.x,p.y,p.w,p.h);
+    c.strokeStyle=p.l===secKatman&&p.l>0&&p.l<L_?'rgba(30,190,240,.75)':'rgba(70,84,150,.55)';c.lineWidth=1.2*px;c.strokeRect(p.x,p.y,p.w,p.h);});
+  c.lineWidth=Math.max(.9*px,.6);
+  if(!gizli){
+    for(var l=0;l<L_;l++){
+      var ni=S[l],no=S[l+1],w=W[l],ain=akt[l],P0=D.dugum[l],P1=D.dugum[l+1],wmax=1e-6,cmax=1e-6;
+      for(i=0;i<w.length;i++){var aw=Math.abs(w[i]);if(aw>wmax)wmax=aw;}
+      for(j=0;j<no;j++)for(i=0;i<ni;i++){var cc=Math.abs(w[j*ni+i]*ain[i]);if(cc>cmax)cmax=cc;}
+      var renkSayisi=l===0?NT+NS:l===L_-1?NS:0,kova=[];for(i=0;i<24+renkSayisi*12;i++)kova.push(null);
+      for(j=0;j<no;j++)for(i=0;i<ni;i++){
+        var ww=w[j*ni+i],gu=Math.abs(ww)/wmax,ka=Math.abs(ww*ain[i])/cmax,a=.14+.55*Math.pow(gu,.9)+.35*ka,lv=Math.min(11,Math.floor(a*12)),k;
+        if(l===L_-1&&ww>0)k=24+j*12+lv;
+        else if(l===0&&ww>0&&i<NT)k=24+i*12+lv;
+        else if(l===0&&ww>0&&i>=NT+6+NK)k=24+(i-6-NK)*12+lv;
+        else k=lv+(ww<0?12:0);
+        if(!kova[k])kova[k]=new Path2D();bez(kova[k],P0[i][0],P0[i][1],P1[j][0],P1[j][1]);
+      }
+      for(var s2=0;s2<kova.length;s2++){
+        var idx=s2<12?s2+12:s2<24?s2-12:s2;if(!kova[idx])continue;
+        var al=((idx%12)+.5)/12;
+        if(idx<12){c.strokeStyle='rgba('+Math.round(18+50*al)+','+Math.round(150+78*al)+',248,'+(.22+.68*al)+')';}
+        else if(idx<24)c.strokeStyle='rgba(196,64,232,'+(.08+.4*al)+')';
+        else{var gr=Math.floor((idx-24)/12),rgb=l===L_-1?SIS_RGB[gr]:(gr<NT?DEP_RGB[gr]:SIS_RGB[gr-NT]);c.strokeStyle=rgba(rgb,.2+.75*al);}
+        c.stroke(kova[idx]);
+      }
+    }
+  } else if(J){
+    var P0g=D.dugum[0],P1g=D.dugum[L_],jm=1e-6;for(i=0;i<NIN;i++)for(j=0;j<NS;j++)if(Math.abs(J[i][j])>jm)jm=Math.abs(J[i][j]);
+    for(i=0;i<NIN;i++)for(j=0;j<NS;j++){var v=J[i][j]/jm,p2=new Path2D();bez(p2,P0g[i][0],P0g[i][1],P1g[j][0],P1g[j][1]);
+      c.strokeStyle=v>=0?rgba(SIS_RGB[j],.06+.9*Math.abs(v)):'rgba(196,64,232,'+(.05+.6*Math.abs(v))+')';c.stroke(p2);}
+  }
+  D.panel.forEach(function(p){
+    var l=p.l,P=D.dugum[l],a=akt[l],n=S[l];
+    c.textBaseline='alphabetic';c.textAlign='left';
+    var bas=l===0?[L('c_giris'),L('noron')+': '+n,L('c_akt')+': Linear']:l===L_?[L('c_cikis'),L('noron')+': '+n,L('c_akt')+': '+ACT[l]+'  '+L('c_tikla')]:[L('c_gizli')+' '+l+' ('+n+')',L('noron')+': '+n,L('c_akt')+': '+ACT[l]+'  '+L('c_tikla')];
+    c.font='500 15px '+FONT;c.fillStyle='#C9D2FF';c.fillText(bas[0],p.x+16,30);
+    c.font='400 13px '+FONT;c.fillStyle='#8F9BDC';c.fillText(bas[1],p.x+16,50);c.fillText(bas[2],p.x+16,68);
+    var mx=1e-6;for(var i=0;i<n;i++)if(Math.abs(a[i])>mx)mx=Math.abs(a[i]);
+    for(i=0;i<n;i++){
+      var q=P[i],v,rk;
+      if(l===0){
+        v=a[i];rk=girdiRengi(i)||'#1EBEF0';
+        var bx=q[0]-108,by=q[1]-9,bw=74,bh=18,h=gecmis[i];
+        c.strokeStyle='rgba(70,84,150,.6)';c.lineWidth=px;c.strokeRect(bx,by,bw,bh);
+        c.beginPath();for(var k=0;k<GECMIS;k++){var val=h[(gecmisUc+k)%GECMIS],xx=bx+2+k/(GECMIS-1)*(bw-4),yy=by+bh-2-val*(bh-4);k?c.lineTo(xx,yy):c.moveTo(xx,yy);}
+        c.strokeStyle=girdiRengi(i)||'#8FE6FF';c.lineWidth=1.1;c.stroke();
+        c.font='400 12px '+FONT;c.textAlign='right';c.textBaseline='middle';
+        var aktif=v>.5&&(i<NT||(i>=NT+6&&i<NT+6+NK)||i===NT+3||i===NT+4);
+        if(aktif){var tw=c.measureText(GIRDI_AD[i]).width;c.fillStyle=girdiRengi(i)||'#D3DA89';c.fillRect(bx-14-tw,q[1]-8,tw+8,16);c.fillStyle='#070B26';}
+        else c.fillStyle=girdiRengi(i)?(v>.02?rk:rgba(hexRgb(rk),.55)):(v>.02?'#C9D2FF':'#5D69A8');
+        c.fillText(GIRDI_AD[i],bx-10,q[1]);
+        c.beginPath();c.arc(q[0],q[1],10,0,6.283);c.fillStyle='rgba(8,30,70,'+(.6+.4*v)+')';c.fill();c.lineWidth=1.8;c.strokeStyle=rk;c.stroke();
+        if(v>.4){c.beginPath();c.arc(q[0],q[1],14,0,6.283);c.strokeStyle=rgba(hexRgb(rk),.35*v);c.lineWidth=3;c.stroke();}
+        c.font='500 9px '+FONT;c.textAlign='center';c.fillStyle='#E8FBFF';c.fillText(v.toFixed(1),q[0],q[1]+.5);
+      } else if(l===L_){
+        v=a[i];rk=SIS[i].renk;
+        c.beginPath();c.arc(q[0],q[1],12,0,6.283);c.fillStyle='rgba(8,24,60,.95)';c.fill();c.lineWidth=2;c.strokeStyle=rk;c.stroke();
+        if(i===kaz){c.beginPath();c.arc(q[0],q[1],18,0,6.283);c.strokeStyle=rgba(SIS_RGB[i],.55);c.lineWidth=2.5;c.stroke();}
+        c.font='500 9px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#E8FBFF';c.fillText(say(v),q[0],q[1]+.5);
+        c.font='400 14px '+FONT;c.textAlign='left';var ad=SIS[i].kod;
+        if(i===kaz){var tw2=c.measureText(ad).width;c.fillStyle=rk;c.fillRect(q[0]+24,q[1]-10,tw2+10,20);c.fillStyle='#070B26';c.fillText(ad,q[0]+29,q[1]+.5);}
+        else{c.fillStyle=rk;c.fillText(ad,q[0]+26,q[1]+.5);}
+        if(i===gosterilen&&i!==kaz){c.strokeStyle=rk;c.lineWidth=1;c.strokeRect(q[0]+22,q[1]-11,c.measureText(ad).width+12,22);}
+        if(isler[i].length){c.font='400 11px '+FONT;c.fillStyle='rgba(201,210,255,.7)';c.fillText(isler[i].length+' '+L('is')+' · '+L('yuk')+' '+Math.round(xSimdi[NT+6+NK+i]*100)+'%',q[0]+26,q[1]+20);}
+      } else {
+        v=k01(Math.abs(a[i])/mx);var kr=['#E046E9','#D85CF0','#C46CF2','#B07CF4','#9C8CF6','#8C9CF8'][Math.min(l-1,5)];
+        c.beginPath();c.arc(q[0],q[1],5.2,0,6.283);c.fillStyle=v>.05?kr:'#2A1E55';c.globalAlpha=.35+.65*v;c.fill();c.globalAlpha=1;
+        c.lineWidth=1.2;c.strokeStyle='#26B7D9';c.stroke();
+        c.font='400 9.5px '+FONT;c.textAlign='left';c.textBaseline='middle';c.fillStyle='#9AA6E6';c.fillText('H'+(i+1),q[0]-16,q[1]+11);
+      }
+    }
+  });
+  c.textBaseline='alphabetic';
+}
+
+// ---------- tuval etkileşimi ----------
+function dunya(ex,ey){return [(ex-kam.x)/kam.s,(ey-kam.y)/kam.s];}
+var isaret={},surukle=null,tasindi=false;
+cv.addEventListener('pointerdown',function(e){cv.setPointerCapture(e.pointerId);isaret[e.pointerId]=[e.offsetX,e.offsetY];tasindi=false;
+  surukle=Object.keys(isaret).length===1?{x:e.offsetX,y:e.offsetY,kx:kam.x,ky:kam.y}:null;cv.classList.add('surukle');});
+cv.addEventListener('pointermove',function(e){if(!isaret[e.pointerId])return;var ids=Object.keys(isaret);
+  if(ids.length===2){var a=isaret[ids[0]],b=isaret[ids[1]],d0=Math.hypot(a[0]-b[0],a[1]-b[1]);isaret[e.pointerId]=[e.offsetX,e.offsetY];a=isaret[ids[0]];b=isaret[ids[1]];
+    var d1=Math.hypot(a[0]-b[0],a[1]-b[1]);if(d0>0)yakinlas((a[0]+b[0])/2,(a[1]+b[1])/2,d1/d0);tasindi=true;return;}
+  isaret[e.pointerId]=[e.offsetX,e.offsetY];if(surukle){var dx=e.offsetX-surukle.x,dy=e.offsetY-surukle.y;if(Math.abs(dx)+Math.abs(dy)>4)tasindi=true;kam.x=surukle.kx+dx;kam.y=surukle.ky+dy;}});
+cv.addEventListener('pointerup',function(e){var tek=Object.keys(isaret).length===1;delete isaret[e.pointerId];cv.classList.remove('surukle');if(tek&&!tasindi)tikla(e.offsetX,e.offsetY);surukle=null;});
+cv.addEventListener('pointercancel',function(e){delete isaret[e.pointerId];surukle=null;});
+cv.addEventListener('wheel',function(e){e.preventDefault();yakinlas(e.offsetX,e.offsetY,Math.exp(-e.deltaY*.0015));},{passive:false});
+cv.addEventListener('dblclick',sigdir);
+function yakinlas(ex,ey,k){var s2=Math.min(6,Math.max(.08,kam.s*k));k=s2/kam.s;kam.x=ex-(ex-kam.x)*k;kam.y=ey-(ey-kam.y)*k;kam.s=s2;}
+function tikla(ex,ey){
+  var p=dunya(ex,ey),L_=S.length-1,P=D.dugum[0],i;
+  for(i=0;i<NIN;i++)if(Math.hypot(p[0]-P[i][0],p[1]-P[i][1])<14||(p[0]>P[i][0]-PW_GIR+20&&p[0]<P[i][0]&&Math.abs(p[1]-P[i][1])<8)){girdiTikla(i);return;}
+  var Po=D.dugum[L_];for(i=0;i<NS;i++)if(Math.abs(p[1]-Po[i][1])<16&&p[0]>Po[i][0]-16&&p[0]<Po[i][0]+PW_CIK-30){if(gosterilen===i&&sabit)sabit=false;else{gosterilen=i;sabit=true;}kararPanel();return;}
+  for(var k=0;k<D.panel.length;k++){var pn=D.panel[k];if(p[0]>=pn.x&&p[0]<=pn.x+pn.w&&p[1]>=pn.y&&p[1]<=pn.y+pn.h){
+    if(pn.l>0&&p[1]<84){var n=AKT_SIRA.indexOf(ACT[pn.l]);ACT[pn.l]=AKT_SIRA[(n+1)%AKT_SIRA.length];yapiDegisti(true);return;}
+    if(pn.l>0&&pn.l<L_){secKatman=pn.l;durum();return;}}}
+}
+function girdiTikla(i){
+  if(i<NT)gorev.tur=i;else if(i>=NT+6&&i<NT+6+NK)gorev.kaynak=i-NT-6;
+  else if(i===NT+3)gorev.yerel=gorev.yerel?0:1;else if(i===NT+4)gorev.internet=gorev.internet?0:1;
+  else if(i<NT+6){var key=['aciliyet','zorluk','risk',null,null,'uzunluk'][i-NT],st=[0,.25,.5,.75,1],en=0;for(var k=0;k<5;k++)if(Math.abs(st[k]-gorev[key])<Math.abs(st[en]-gorev[key]))en=k;gorev[key]=st[(en+1)%5];}
+  else return;
+  hazirNo=-1;sabit=false;girdiDegisti();
+}
+function canliAyarla(v){canli=v;$('canli').setAttribute('aria-pressed',v);if(!v)formu();}
+$('canli').onclick=function(){canliAyarla(!canli);sabit=false;};
+$('calis').onclick=function(){calis=!calis;this.setAttribute('aria-pressed',calis);};
+$('calis').setAttribute('aria-pressed',calis);
+$('gizle').onclick=function(){gizli=!gizli;this.setAttribute('aria-pressed',gizli);yerlesim();sigdir();};
+$('yerlestir').onclick=function(){yerlesim();sigdir();};
+function noronEkle(d){var L_=S.length-1;if(secKatman<1||secKatman>=L_)secKatman=1;var y=S[secKatman]+d;if(y<2||y>64)return;var eW=W.slice(),eB=B.slice(),eS=S.slice();S[secKatman]=y;kur(eW,eB,eS);yapiDegisti(false);}
+function katmanEkle(){if(S.length>8)return;var yer=Math.max(1,secKatman)+1;S.splice(yer,0,16);ACT.splice(yer,0,'ReLU');secKatman=yer;kur();sifirla(false);}
+function katmanSil(){var L_=S.length-1;if(L_<=2)return;var k=Math.min(Math.max(1,secKatman),L_-1);S.splice(k,1);ACT.splice(k,1);secKatman=Math.max(1,k-1);kur();sifirla(false);}
+$('ekle').onclick=function(){noronEkle(1);};$('sil').onclick=function(){noronEkle(-1);};$('katEkle').onclick=katmanEkle;$('katSil').onclick=katmanSil;
+$('sifir').onclick=function(){kur();sifirla(true);};
+document.addEventListener('keydown',function(e){if(e.target.tagName==='INPUT'||e.target.closest('.dil'))return;var k=e.key.toLowerCase();
+  if(k==='n')noronEkle(1);else if(k==='d')noronEkle(-1);else if(k==='l')katmanEkle();else if(k==='k')katmanSil();else if(k==='r'){yerlesim();sigdir();}});
+function yapiDegisti(a){if(a)kur(W.slice(),B.slice(),S.slice());yerlesim();egitiliyor=true;HEDEF=adim+5000;dogr=null;durum();}
+function sifirla(tam){if(tam)adim=0;kayipEma=null;dogr=null;egitiliyor=true;HEDEF=adim+9000;yerlesim();sigdir();durum();}
+function durum(){var t=0;for(var l=0;l<S.length;l++)t+=S[l];$('toplam').textContent='('+L('noron')+': '+t+')';
+  $('durum').innerHTML=kacis(L('adim'))+' <b>'+adim.toLocaleString(LANG)+'</b> · '+kacis(L('hata'))+' <b>'+(kayipEma==null?'–':kayipEma.toFixed(4))+'</b> · '+kacis(L('dogru'))+' <b>'+(dogr==null?'–':Math.round(dogr*100)+'%')+'</b>'+(egitiliyor?' · <i>'+kacis(L('egit'))+'</i>':'')+' · '+kacis(L('secili'))+': '+secKatman;}
+
+// ---------- dil ----------
+var dilM=$('dilM'),dilB=$('dilB');
+LANGS.forEach(function(l){var b=el('button');b.type='button';b.setAttribute('role','menuitemradio');b.setAttribute('data-lang',l);b.lang=l;
+  var k=el('b',null,l.toUpperCase());b.appendChild(k);b.appendChild(el('span',null,ADLAR[l]));
+  b.onclick=function(){LANG=l;try{localStorage.setItem('ozmira-site-dil',l);}catch(_){}dilKapat(true);dilUygula();};dilM.appendChild(b);});
+function dilAc(){dilM.hidden=false;dilB.setAttribute('aria-expanded','true');var s=dilM.querySelector('[aria-checked=true]')||dilM.firstChild;s.focus();}
+function dilKapat(odak){dilM.hidden=true;dilB.setAttribute('aria-expanded','false');if(odak)dilB.focus();}
+dilB.onclick=function(){dilM.hidden?dilAc():dilKapat(false);};
+document.addEventListener('click',function(e){if(!dilM.hidden&&!e.target.closest('#dil'))dilKapat(false);});
+dilM.addEventListener('keydown',function(e){var bs=[].slice.call(dilM.children),i=bs.indexOf(document.activeElement);
+  if(e.key==='Escape'){e.preventDefault();dilKapat(true);}else if(e.key==='ArrowDown'){e.preventDefault();bs[(i+1)%bs.length].focus();}else if(e.key==='ArrowUp'){e.preventDefault();bs[(i-1+bs.length)%bs.length].focus();}});
+function dilUygula(){
+  document.documentElement.lang=LANG;document.documentElement.dir=LANG==='ar'?'rtl':'ltr';
+  [].forEach.call(document.querySelectorAll('[data-l]'),function(e){e.textContent=L(e.getAttribute('data-l'));});
+  [].forEach.call(document.querySelectorAll('[data-lph]'),function(e){e.placeholder=L(e.getAttribute('data-lph'));});
+  [].forEach.call(document.querySelectorAll('[data-lal]'),function(e){e.setAttribute('aria-label',L(e.getAttribute('data-lal')));});
+  document.title=L('title')+' · OZMIRA';var md=document.querySelector('meta[name=description]');if(md)md.content=L('desc');
+  document.querySelector('.geri').textContent=(LANG==='ar'?'→ ':'← ')+L('geri');
+  $('dilKod').textContent=LANG.toUpperCase();
+  [].forEach.call(dilM.children,function(b){b.setAttribute('aria-checked',b.getAttribute('data-lang')===LANG);});
+  if(hazirNo>=0)$('gorevAd').value=gorevAdi();
+  formu();kararPanel();durum();ciz();
+}
+
+// ---------- döngü ----------
+var t0=performance.now(),son=t0,sonKayit=0,sayac=0;
+function kare(now){
+  var t=(now-t0)/1000,dt=Math.min(.1,(now-son)/1000);son=now;
+  if(egitiliyor){for(var k=0;k<5;k++){var ls=egitAdim();kayipEma=kayipEma==null?ls:kayipEma*.97+ls*.03;}if(adim%100<5)dogr=dogruluk();if(adim>=HEDEF){egitiliyor=false;dogr=dogruluk();}}
+  if(calis){for(var s=0;s<NS;s++){var hz=SIS[s].hiz;for(var w=isler[s].length-1;w>=0;w--){var is=isler[s][w];is.ilerleme+=dt*(.015+.035*hz)/(.5+is.yuk)/(w===0?1:3);if(is.ilerleme>=1)isler[s].splice(w,1);}}}
+  xSimdi=canli?canliGirdi(t):girdi(gorev,doluluk());
+  if(now-sonKayit>45){sonKayit=now;for(var i=0;i<NIN;i++)gecmis[i][gecmisUc]=xSimdi[i];gecmisUc=(gecmisUc+1)%GECMIS;}
+  akt=ileri(xSimdi);if(gizli&&(sayac%6===0||!J))J=etkiHesapla(xSimdi);
+  if(sayac%8===0){kararPanel();durum();}
+  ciz();sayac++;requestAnimationFrame(kare);
+}
+kur();for(var on=0;on<600;on++){var l0=egitAdim();kayipEma=kayipEma==null?l0:kayipEma*.97+l0*.03;}dogr=dogruluk();
+for(var gh=0;gh<GECMIS;gh++)for(var ii=0;ii<NIN;ii++)gecmis[ii][gh]=xSimdi[ii];
+$('gorevAd').value=gorevAdi();
+boyutla();yerlesim();sigdir();akt=ileri(xSimdi);dilUygula();
+if(window.ResizeObserver)new ResizeObserver(function(){boyutla();sigdir();}).observe(cv);
+window.addEventListener('resize',function(){boyutla();sigdir();});
+requestAnimationFrame(kare);
+})();
+</script>
+</body></html>
