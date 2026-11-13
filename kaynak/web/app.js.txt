@@ -121,7 +121,7 @@ function dockCiz() {
   dock.append(h('span', { class: 'sep' }), b(t('dock.demo'), () => { demoAcik = !demoAcik; sahne.demo(demoAcik); dockSig = ''; dockCiz(); }, demoAcik));
   if (!ornekMi) dock.append(b(t('dock.baglan'), baglanPenceresi));
   dock.append(b(ornekMi ? t('dock.kur') : t('dock.duzenle'), () => sihirbaz()));
-  dock.append(h('span', { class: 'sep' }), b(t('dock.sohbet'), () => sohbetPenceresi()), b(t('dock.panel'), () => yonetimPaneli()), b(t('dock.rehber'), () => rehberPenceresi()));
+  dock.append(h('span', { class: 'sep' }), b(t('dock.sohbet'), () => sohbetPenceresi()), b(t('dock.panel'), () => yonetimPaneli()), b(t('dock.rehber'), () => rehberPenceresi()), b(t('dock.telefon'), () => telefonPenceresi()));
   dock.append(h('span', { class: 'sep' }), b(hesap.plan === 'pro' ? t('dock.pro') : t('dock.ucretsiz'), hesapPenceresi), b(dil.toUpperCase(), dilPenceresi));
 }
 // Pro: bir sisteme odaklanınca adı büyük yazıyla sahnenin altında görünür (sistem modu).
@@ -263,6 +263,48 @@ function sihirbaz() {
   }
 }
 
+
+// ---------- Telefon: eşleştirme kodu, ev ağı, şifreli aktarım ----------
+function qrCiz(satirlar) {
+  const NS = 'http://www.w3.org/2000/svg', n = satirlar.length, kenar = 4;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + (n + 2 * kenar) + ' ' + (n + 2 * kenar)); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', t('tel.qrAria'));
+  svg.setAttribute('shape-rendering', 'crispEdges'); svg.setAttribute('class', 'tel-qr');
+  const zemin = document.createElementNS(NS, 'rect'); zemin.setAttribute('width', '100%'); zemin.setAttribute('height', '100%'); zemin.setAttribute('fill', '#F3EEE2'); svg.append(zemin);
+  let d = ''; satirlar.forEach((s, r) => { for (let c = 0; c < s.length; c++) if (s[c] === '1') d += 'M' + (c + kenar) + ' ' + (r + kenar) + 'h1v1h-1z'; });
+  const yol = document.createElementNS(NS, 'path'); yol.setAttribute('d', d); yol.setAttribute('fill', '#070A11'); svg.append(yol);
+  return svg;
+}
+async function telefonPenceresi() {
+  let bilgi = { eslesmis: false }, hata = '', mesaj = '';
+  try { bilgi = await api('GET', '/api/telefon'); } catch (e) { hata = e.message; }
+  const islem = async (govde) => { try { bilgi = await api('POST', '/api/telefon', govde); hata = ''; mesaj = govde.islem === 'ayarla' ? t('tel.kaydedildi') : ''; } catch (e) { hata = e.message; mesaj = ''; } ciz(); };
+  function ciz() {
+    const hataKutu = h('div', { class: 'err', role: 'alert', text: hata }), bilgiKutu = h('div', { class: 'found', role: 'status', text: mesaj });
+    if (!bilgi.eslesmis) {
+      pencereAc([h('h1', { text: t('tel.baslik') }), h('p', { class: 'lead', text: t('tel.lead') }), h('p', { class: 'hint', text: t('tel.uygulama') }), hataKutu,
+        h('div', { class: 'foot' }, h('button', { class: 'btn', type: 'button', text: t('c.kapat'), onclick: pencereKapat }), h('button', { class: 'btn main', type: 'button', 'data-o': 'olustur', text: t('tel.olustur'), onclick: () => islem({ islem: 'eslestir' }) }))]);
+      return;
+    }
+    const ev = h('input', { type: 'checkbox', id: 'telEv', checked: bilgi.ev_agi, 'data-o': 'telEv', onchange: (e) => islem({ islem: 'ayarla', ev_agi: e.currentTarget.checked }) });
+    const ak = h('input', { type: 'checkbox', id: 'telAk', checked: bilgi.aktarim, 'data-o': 'telAk', onchange: (e) => islem({ islem: 'ayarla', aktarim: e.currentTarget.checked }) });
+    pencereAc([
+      h('h1', { text: t('tel.baslik') }), h('p', { class: 'lead', text: t('tel.tara') }),
+      h('div', { class: 'tel-qr-kutu' }, qrCiz(bilgi.qr || [])),
+      h('p', { class: 'hint', text: t('tel.gizli') }),
+      h('label', { class: 'f', for: 'telEv' }, h('span', {}, ev, ' ' + t('tel.evAgi'))),
+      h('p', { class: 'hint', text: t('tel.evAgiHint', { p: bilgi.port || 8789 }) + (bilgi.ev_agi && bilgi.ip ? ' (' + bilgi.ip + ':' + (bilgi.port || 8789) + ')' : '') }),
+      h('label', { class: 'f', for: 'telAk' }, h('span', {}, ak, ' ' + t('tel.aktarim'))),
+      h('p', { class: 'hint', text: t('tel.aktarimHint') + (bilgi.aktarim && bilgi.aktarim_durum ? ' ' + t('tel.aktarimDurum', { x: bilgi.aktarim_durum }) : '') }),
+      hataKutu, bilgiKutu,
+      h('div', { class: 'foot' },
+        h('button', { class: 'btn small', type: 'button', text: t('tel.kaldir'), onclick: () => islem({ islem: 'sifirla' }) }),
+        h('button', { class: 'btn small', type: 'button', text: t('tel.yeniKod'), onclick: () => islem({ islem: 'eslestir' }) }),
+        h('button', { class: 'btn main', type: 'button', text: t('c.kapat'), onclick: pencereKapat })),
+    ]);
+  }
+  ciz();
+}
 
 // ---------- Hesap: plan, lisans, paylaşım ----------
 function hesapPenceresi() {

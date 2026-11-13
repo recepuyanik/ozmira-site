@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OZMIRA gizlilik politikası · Privacy policy</title>
+<meta name="description" content="OZMIRA masaüstü uygulaması, telefon uygulaması ve ozmira.app için gizlilik politikası. Privacy policy for the OZMIRA desktop app, phone app and website.">
+<meta name="theme-color" content="#070A11">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="https://ozmira.app/gizlilik.html">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&family=Instrument+Serif&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root { --bg: #070A11; --ink: #F3EEE2; --mute: #aeb3c2; --gold: #F3B84B; --gold2: #F8D992; --line: rgba(243, 238, 226, .12); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16.5px/1.65 "Instrument Sans", system-ui, sans-serif; }
+::selection { background: var(--gold); color: #1a1204; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 56px max(20px, env(safe-area-inset-left, 0px)) 80px max(20px, env(safe-area-inset-right, 0px)); }
+a { color: var(--gold2); } a:hover { color: var(--gold); }
+.ust { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 40px; }
+.marka { font: 500 13px/1 "JetBrains Mono", monospace; letter-spacing: .32em; color: var(--ink); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.dil a { font: 500 12px/1 "JetBrains Mono", monospace; margin-left: 14px; min-height: 44px; display: inline-flex; align-items: center; }
+h1 { font: 400 clamp(36px, 7vw, 52px)/1.05 "Instrument Serif", serif; margin: 0 0 10px; text-wrap: balance; }
+h2 { font: 600 20px/1.3 "Instrument Sans", sans-serif; margin: 36px 0 8px; }
+.tarih { font: 500 12px/1.4 "JetBrains Mono", monospace; color: var(--mute); }
+p, li { color: #dcd8cd; } ul { padding-left: 22px; }
+.ozet { border-radius: 18px; padding: 18px 20px; background: rgba(243, 184, 75, .08); box-shadow: inset 0 0 0 1px rgba(243, 184, 75, .3); margin: 24px 0; }
+section + section { border-top: 1px solid var(--line); margin-top: 56px; padding-top: 40px; }
+code { font: 500 .88em "JetBrains Mono", monospace; color: var(--gold2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ust"><a class="marka" href="/">OZMIRA</a><nav class="dil" aria-label="Dil / Language"><a href="#tr" lang="tr">Türkçe</a><a href="#en" lang="en">English</a></nav></div>
+
+  <section id="tr" lang="tr">
+    <h1>Gizlilik politikası</h1>
+    <div class="tarih">Son güncelleme: 13 Kasım 2026 · Kapsam: OZMIRA masaüstü uygulaması, OZMIRA telefon uygulaması ve ozmira.app</div>
+    <div class="ozet"><b>Kısaca:</b> Hesap yok, reklam yok, izleme yok. Ajan ve sistem verilerin bilgisayarında durur. Telefona giden veri bilgisayarında şifrelenir ve anahtarı yalnızca senin telefonunda bulunur.</div>
+
+    <h2>Masaüstü uygulaması</h2>
+    <p>Sistem tanımların, olaylar, sohbet geçmişi ve erişim anahtarı yalnızca bilgisayarındaki <code>.ozmira</code> klasöründe durur. Uygulama yalnızca bu bilgisayardan bağlanılabilen bir sunucu açar. İsteğe bağlı anonim sayaç paylaşımı varsayılan olarak kapalıdır; açarsan günde en fazla bir kez sürüm, plan, rastgele bir kurulum kimliği ve sayılar gönderilir. Sistem adların, ajan adların, klasör yolların ve IP adresin gönderilmez.</p>
+
+    <h2>Telefon uygulaması</h2>
+    <ul>
+      <li><b>Ne gösterir:</b> sistem adları ve renkleri, ajan adları ve durumları, iş ve token sayıları, son 7 günün özeti ve son olaylar. Sohbet mesajları, prompt'lar ve kod telefona gitmez.</li>
+      <li><b>Nasıl gelir:</b> veriler bilgisayarında AES-256-GCM ile şifrelenir. Anahtar, eşleştirirken ekrandaki kodla telefona geçer ve yalnızca telefonun uygulama alanında saklanır.</li>
+      <li><b>Ev ağı:</b> telefon aynı Wi-Fi ağındaki bilgisayarından şifreli paketi doğrudan okur. Arada sunucu yoktur.</li>
+      <li><b>Şifreli aktarım (isteğe bağlı, kapalı başlar):</b> açarsan bilgisayarın şifreli paketi 15 saniyede bir ozmira.app aktarım noktasına (Cloudflare) yazar, telefon oradan okur. Sunucu anahtarı bilmez ve içeriği okuyamaz; yalnızca şifreli paketi, yazılma zamanını ve rastgele bir cihaz kimliğini saklar. 30 gün yazılmayan kayıt silinir. Kötüye kullanımı önlemek için IP adresine göre o anlık hız sınırı uygulanır; IP adresi saklanmaz.</li>
+      <li><b>İzinler:</b> internet ve yerel ağ erişimi. Kod tarama Google'ın kod tarayıcısıyla yapılır; uygulama kamera görüntüsüne erişmez, yalnızca okunan kodu alır.</li>
+      <li><b>Hesap, reklam, analiz:</b> yok. Uygulama kimseyle veri paylaşmaz ve satmaz.</li>
+      <li><b>Silme:</b> Ayarlar &gt; Eşleşmeyi kaldır telefondaki her şeyi siler. Bilgisayarda Telefon &gt; Eşleşmeyi kaldır anahtarı geçersiz kılar. Uygulamayı kaldırmak da her şeyi siler.</li>
+    </ul>
+
+    <h2>ozmira.app</h2>
+    <p>Ziyaretler çerez kullanmadan GoatCounter ile sayılır; yalnızca sayfa, tarih, tarayıcı türü ve yönlendiren site gibi toplamlar tutulur. "Bize yaz" formuyla gönderdiğin metin, tür, sayfa dili ve isteğe bağlı e-postan bize e-posta olarak ulaşır; yalnızca yanıt vermek için kullanılır. IP adresin saklanmaz.</p>
+
+    <h2>Çocuklar</h2>
+    <p>OZMIRA geliştiricilere ve öğrencilere yönelik bir araçtır; bilerek çocuklardan kişisel veri toplamayız.</p>
+
+    <h2>İletişim</h2>
+    <p>Sorular ve silme istekleri için: <b>destek@ozmira.app</b> ya da <a href="/#yaz">Bize yaz</a> formu. Bu politika değişirse bu sayfa ve tarih güncellenir.</p>
+  </section>
+
+  <section id="en" lang="en">
+    <h1>Privacy policy</h1>
+    <div class="tarih">Last updated: 13 November 2026 · Scope: OZMIRA desktop app, OZMIRA phone app and ozmira.app</div>
+    <div class="ozet"><b>In short:</b> no account, no ads, no tracking. Your agent and system data stays on your computer. Data sent to the phone is encrypted on your computer, and only your phone holds the key.</div>
+
+    <h2>Desktop app</h2>
+    <p>Your system definitions, events, chat history and access key are stored only in the <code>.ozmira</code> folder on your computer. The app opens a server reachable only from this computer. Optional anonymous counters are off by default; if you turn them on, at most once a day the version, plan, a random installation ID and counts are sent. Your system names, agent names, folder paths and IP address are not sent.</p>
+
+    <h2>Phone app</h2>
+    <ul>
+      <li><b>What it shows:</b> system names and colors, agent names and status, task and token counts, a 7-day summary and recent events. Chat messages, prompts and code are never sent to the phone.</li>
+      <li><b>How it arrives:</b> data is encrypted on your computer with AES-256-GCM. The key reaches the phone through the on-screen pairing code and is stored only in the app's private storage.</li>
+      <li><b>Home network:</b> the phone reads the encrypted packet directly from your computer on the same Wi-Fi. There is no server in between.</li>
+      <li><b>Encrypted relay (optional, off by default):</b> if you turn it on, your computer writes the encrypted packet to the ozmira.app relay (Cloudflare) every 15 seconds and the phone reads it there. The server does not know the key and cannot read the content; it stores only the encrypted packet, its time and a random device ID. Records not written for 30 days are deleted. To prevent abuse, requests are rate-limited by IP address at that moment; IP addresses are not stored.</li>
+      <li><b>Permissions:</b> internet and local network access. Scanning uses Google's code scanner; the app does not access the camera feed, it only receives the scanned code.</li>
+      <li><b>Accounts, ads, analytics:</b> none. The app does not share or sell data.</li>
+      <li><b>Deletion:</b> Settings &gt; Remove pairing deletes everything on the phone. On the computer, Phone &gt; Remove pairing invalidates the key. Uninstalling the app also deletes everything.</li>
+    </ul>
+
+    <h2>ozmira.app</h2>
+    <p>Visits are counted with GoatCounter without cookies; only totals such as page, date, browser type and referrer are kept. Text you send with the "Write to us" form, its type, the page language and your optional email reach us as an email and are used only to reply. Your IP address is not stored.</p>
+
+    <h2>Children</h2>
+    <p>OZMIRA is a tool for developers and students; we do not knowingly collect personal data from children.</p>
+
+    <h2>Contact</h2>
+    <p>For questions and deletion requests: <b>destek@ozmira.app</b> or the <a href="/en/#yaz">Write to us</a> form. If this policy changes, this page and its date will be updated.</p>
+  </section>
+</div>
+</body>
+</html>

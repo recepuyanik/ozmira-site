@@ -2,7 +2,7 @@
 
 > OZMIRA is a free, local desktop app that shows all your AI systems and agents (Claude, ChatGPT/Codex, Gemini, Grok and your own agents) in one 3D scene and one dashboard. It shows which agent is running, how many tasks finished today and how many tokens were reported, and its shared chat routes each message to the right AI by topic. No account, no cloud: records stay on your computer.
 
-Status: early prototype, version 0.3.3 (November 2026). Built independently; first users wanted.
+Status: early prototype, version 0.4.0 (November 2026). Built independently; first users wanted.
 
 ## What it does
 - One scene: every AI system appears in its own color and shape, linked to the OZMIRA mark in the center.
@@ -10,6 +10,11 @@ Status: early prototype, version 0.3.3 (November 2026). Built independently; fir
 - Dashboard: summary boxes, last 7 days, searchable agent table, event list, CSV export, token flow and estimated cost per system and agent (you enter prices; it is an estimate).
 - Shared chat: type in one box; OZMIRA picks the AI by topic (software to Claude, product ideas to ChatGPT/Codex, documents to Gemini) using the command-line tool already installed on your computer. Chats are kept per project.
 - Ten-lesson in-app guide, and the Ozma Academy on the website: eight hands-on missions for building your own AI setup.
+
+## Phone app (Android, coming to stores)
+- Shows running agents, finished tasks, tokens, a 7-day summary and recent events from the desktop app.
+- Pairs with the desktop by QR code. Data is encrypted on the computer with AES-256-GCM; only the phone holds the key.
+- Reads over the home network by default; an optional encrypted relay via ozmira.app works away from home (the server cannot read the content).
 
 ## Plans
 - Free: up to 2 AI systems, 7 agents, 50 shared-chat messages a day during beta, 2 chat projects. No account.
@@ -29,6 +34,7 @@ Status: early prototype, version 0.3.3 (November 2026). Built independently; fir
 - [English](https://ozmira.app/en/) · [Deutsch](https://ozmira.app/de/) · [Español](https://ozmira.app/es/) · [Português](https://ozmira.app/pt/) · [Русский](https://ozmira.app/ru/) · [العربية](https://ozmira.app/ar/) · [Nederlands](https://ozmira.app/nl/) · [Italiano](https://ozmira.app/it/) · [Français](https://ozmira.app/fr/)
 - [Free download (zip)](https://ozmira.app/ozmira-app.zip)
 - [Ozma decision network demo](https://ozmira.app/ag.html)
+- [Privacy policy](https://ozmira.app/gizlilik.html)
 - [Contact / feedback form](https://ozmira.app/en/#yaz) · email: destek@ozmira.app
 
 ## Honest limits

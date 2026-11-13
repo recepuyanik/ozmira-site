@@ -39,7 +39,10 @@ import uuid
 import webbrowser
 from pathlib import Path
 
-SURUM = "0.3.3"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ozmira_telefon  # noqa: E402  telefon köprüsü (yalnızca standart kütüphane)
+
+SURUM = "0.4.0"
 KOK = Path(__file__).resolve().parent
 WEB = KOK / "web"
 EV = Path(os.environ.get("OZMIRA_HOME") or (Path.home() / ".ozmira"))
@@ -1009,6 +1012,7 @@ def yerel_three():
 
 # ---------- HTTP ----------
 class Ayar:
+    kopru = None
     token = ""
     acilis = None
     acilis_dosya = None
@@ -1096,6 +1100,8 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self._json(200, {"klasorler": oneriler()})
             if p == "/api/hesap":
                 return self._json(200, hesap_goster())
+            if p == "/api/telefon":
+                return self._json(200, Ayar.kopru.bilgi() if Ayar.kopru else {"eslesmis": False})
             return self._json(404, {"hata": "Yok."})
         if not self._host_ok():
             return self._json(403, {"hata": "Geçersiz Host."})
@@ -1201,7 +1207,7 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._yetkili():
             return
-        if self.path not in ("/api/olay", "/api/geri-bildirim", "/api/sohbet"):
+        if self.path not in ("/api/olay", "/api/geri-bildirim", "/api/sohbet", "/api/telefon"):
             return self._json(404, {"hata": "Yok."})
         g = self._govde()
         if g is None:
@@ -1215,6 +1221,23 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self._json(409, {"hata": str(e)})
             except BlockingIOError as e:
                 return self._json(429, {"hata": str(e)})
+            except ValueError as e:
+                return self._json(400, {"hata": str(e)})
+        if self.path == "/api/telefon":
+            if not isinstance(g, dict) or not Ayar.kopru:
+                return self._json(400, {"hata": "Geçersiz istek."})
+            try:
+                islem = g.get("islem")
+                if islem == "eslestir":
+                    Ayar.kopru.eslestir()
+                elif islem == "sifirla":
+                    Ayar.kopru.sifirla()
+                elif islem == "ayarla":
+                    Ayar.kopru.ayarla(ev_agi=g.get("ev_agi"), aktarim=g.get("aktarim"))
+                else:
+                    return self._json(400, {"hata": "Geçersiz istek."})
+                sayac("telefon_" + islem)
+                return self._json(200, Ayar.kopru.bilgi())
             except ValueError as e:
                 return self._json(400, {"hata": str(e)})
         if self.path == "/api/geri-bildirim":
@@ -1291,6 +1314,10 @@ def calistir(lan, ac, uygulama=False):
     print("  %-11s: %s" % (m("b_pay"), m("b_pay_ac") if ayar_oku()["telemetri"] else m("b_pay_kapali")))
     print("  " + m("b_dur"))
     threading.Thread(target=gunluk_ozet_dongusu, daemon=True).start()
+    Ayar.kopru = ozmira_telefon.Kopru(EV, durum_uret, panel_uret, json_oku, json_yaz, SURUM, lan_ip)
+    Ayar.kopru.baslat()
+    if Ayar.kopru.port:
+        print("  %-11s: %s:%d" % ("telefon", lan_ip(), Ayar.kopru.port))
     adres = ("http://localhost:%d/?k=%s" % (Ayar.port, Ayar.token)) if lan else Ayar.acilis_dosya.as_uri()
     if ac:
         pencere = None if lan else tarayici_bul() if uygulama else None

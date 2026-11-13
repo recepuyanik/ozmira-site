@@ -1,0 +1,527 @@
+"""OZMIRA telefon köprüsü: telefon uygulamasına şifreli anlık durum verir.
+
+Yalnızca Python'un standart kütüphanesi kullanılır (ek paket kurulmaz).
+- Şifreleme: AES-256-GCM (NIST SP 800-38D). Anahtar eşleşmede QR ile telefona geçer, hiçbir sunucuya gitmez.
+- Ev ağı: ayrı bir portta yalnızca GET /m/<cihaz_id> cevaplanır ve yalnızca şifreli veri döner.
+- Şifreli aktarım (isteğe bağlı): aynı şifreli veri ozmira.app aktarım noktasına yazılır; sunucu içeriği okuyamaz.
+"""
+import base64
+import hashlib
+import hmac
+import http.server
+import json
+import os
+import secrets
+import socket
+import threading
+import time
+import urllib.request
+
+# ---------- AES-256 ----------
+_SBOX = [0] * 256
+_RCON = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40]
+
+
+def _xt(a):
+    a <<= 1
+    return (a ^ 0x11B) & 0xFF if a & 0x100 else a
+
+
+def _sbox_kur():
+    p = q = 1
+    while True:
+        p = p ^ ((p << 1) & 0xFF) ^ (0x1B if p & 0x80 else 0)
+        q ^= q << 1
+        q ^= q << 2
+        q ^= q << 4
+        q &= 0xFF
+        if q & 0x80:
+            q ^= 0x09
+        x = q ^ (((q << 1) | (q >> 7)) & 0xFF) ^ (((q << 2) | (q >> 6)) & 0xFF) ^ (((q << 3) | (q >> 5)) & 0xFF) ^ (((q << 4) | (q >> 4)) & 0xFF)
+        _SBOX[p] = x ^ 0x63
+        if p == 1:
+            break
+    _SBOX[0] = 0x63
+
+
+_sbox_kur()
+# T tabloları (şifreleme yönü)
+_T0 = []
+for _s in _SBOX:
+    _s2 = _xt(_s)
+    _s3 = _s2 ^ _s
+    _T0.append((_s2 << 24) | (_s << 16) | (_s << 8) | _s3)
+_T1 = [((t >> 8) | ((t & 0xFF) << 24)) for t in _T0]
+_T2 = [((t >> 8) | ((t & 0xFF) << 24)) for t in _T1]
+_T3 = [((t >> 8) | ((t & 0xFF) << 24)) for t in _T2]
+
+
+def _anahtar_genislet(k):
+    assert len(k) == 32
+    w = [int.from_bytes(k[i:i + 4], "big") for i in range(0, 32, 4)]
+    S = _SBOX
+    for i in range(8, 60):
+        t = w[i - 1]
+        if i % 8 == 0:
+            t = ((t << 8) & 0xFFFFFFFF) | (t >> 24)
+            t = (S[t >> 24] << 24) | (S[(t >> 16) & 0xFF] << 16) | (S[(t >> 8) & 0xFF] << 8) | S[t & 0xFF]
+            t ^= _RCON[i // 8 - 1] << 24
+        elif i % 8 == 4:
+            t = (S[t >> 24] << 24) | (S[(t >> 16) & 0xFF] << 16) | (S[(t >> 8) & 0xFF] << 8) | S[t & 0xFF]
+        w.append(w[i - 8] ^ t)
+    return w
+
+
+def _blok(w, b):
+    s0, s1, s2, s3 = (int.from_bytes(b[i:i + 4], "big") ^ w[i // 4] for i in range(0, 16, 4))
+    T0, T1, T2, T3, S = _T0, _T1, _T2, _T3, _SBOX
+    for r in range(1, 14):
+        k = 4 * r
+        t0 = T0[s0 >> 24] ^ T1[(s1 >> 16) & 0xFF] ^ T2[(s2 >> 8) & 0xFF] ^ T3[s3 & 0xFF] ^ w[k]
+        t1 = T0[s1 >> 24] ^ T1[(s2 >> 16) & 0xFF] ^ T2[(s3 >> 8) & 0xFF] ^ T3[s0 & 0xFF] ^ w[k + 1]
+        t2 = T0[s2 >> 24] ^ T1[(s3 >> 16) & 0xFF] ^ T2[(s0 >> 8) & 0xFF] ^ T3[s1 & 0xFF] ^ w[k + 2]
+        t3 = T0[s3 >> 24] ^ T1[(s0 >> 16) & 0xFF] ^ T2[(s1 >> 8) & 0xFF] ^ T3[s2 & 0xFF] ^ w[k + 3]
+        s0, s1, s2, s3 = t0, t1, t2, t3
+    o = b""
+    for i, (a, bb, c, d) in enumerate(((s0, s1, s2, s3), (s1, s2, s3, s0), (s2, s3, s0, s1), (s3, s0, s1, s2))):
+        v = (S[a >> 24] << 24) | (S[(bb >> 16) & 0xFF] << 16) | (S[(c >> 8) & 0xFF] << 8) | S[d & 0xFF]
+        o += (v ^ w[56 + i]).to_bytes(4, "big")
+    return o
+
+
+# ---------- GCM ----------
+_R = 0xE1 << 120
+
+
+def _gmul(x, y):
+    z, v = 0, y
+    for i in range(127, -1, -1):
+        if (x >> i) & 1:
+            z ^= v
+        v = (v >> 1) ^ _R if v & 1 else v >> 1
+    return z
+
+
+class _Ghash:
+    """H için 4 bitlik tablo (hızlı GHASH)."""
+
+    def __init__(self, h):
+        self.m = [[0] * 16 for _ in range(32)]
+        for i in range(32):
+            sh = 4 * (31 - i)
+            for n in range(16):
+                self.m[i][n] = _gmul(n << sh, h)
+
+    def carp(self, x):
+        z, m = 0, self.m
+        for i in range(32):
+            z ^= m[i][(x >> (4 * (31 - i))) & 0xF]
+        return z
+
+    def ozet(self, aad, c):
+        y = 0
+        for veri in (aad, c):
+            for i in range(0, len(veri), 16):
+                p = veri[i:i + 16].ljust(16, b"\0")
+                y = self.carp(y ^ int.from_bytes(p, "big"))
+        y = self.carp(y ^ ((len(aad) * 8) << 64 | (len(c) * 8)))
+        return y
+
+
+def _ctr(w, j0, veri):
+    sayac = int.from_bytes(j0[12:], "big")
+    on = j0[:12]
+    out = bytearray()
+    for i in range(0, len(veri), 16):
+        sayac = (sayac + 1) & 0xFFFFFFFF
+        ks = _blok(w, on + sayac.to_bytes(4, "big"))
+        p = veri[i:i + 16]
+        out += bytes(a ^ b for a, b in zip(p, ks))
+    return bytes(out)
+
+
+def sifrele(anahtar, nonce, duz, aad=b""):
+    """AES-256-GCM: şifreli metin + 16 baytlık etiket döner."""
+    w = _anahtar_genislet(anahtar)
+    gh = _Ghash(int.from_bytes(_blok(w, b"\0" * 16), "big"))
+    j0 = nonce + b"\0\0\0\1"
+    c = _ctr(w, j0, duz)
+    s = gh.ozet(aad, c)
+    etiket = (s ^ int.from_bytes(_blok(w, j0), "big")).to_bytes(16, "big")
+    return c + etiket
+
+
+def coz(anahtar, nonce, veri, aad=b""):
+    w = _anahtar_genislet(anahtar)
+    gh = _Ghash(int.from_bytes(_blok(w, b"\0" * 16), "big"))
+    j0 = nonce + b"\0\0\0\1"
+    c, etiket = veri[:-16], veri[-16:]
+    s = gh.ozet(aad, c)
+    beklenen = (s ^ int.from_bytes(_blok(w, j0), "big")).to_bytes(16, "big")
+    if not hmac.compare_digest(beklenen, etiket):
+        raise ValueError("etiket tutmuyor")
+    return _ctr(w, j0, c)
+
+
+def b64u(b):
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+
+def b64u_coz(s):
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+# ---------- QR kod (bayt kipi, M düzeltme düzeyi, sürüm 1-15) ----------
+_EC_M = {  # sürüm: (blok başına düzeltme kodu, [(blok sayısı, veri kodu sayısı), ...])
+    1: (10, [(1, 16)]), 2: (16, [(1, 28)]), 3: (26, [(1, 44)]), 4: (18, [(2, 32)]), 5: (24, [(2, 43)]),
+    6: (16, [(4, 27)]), 7: (18, [(4, 31)]), 8: (22, [(2, 38), (2, 39)]), 9: (22, [(3, 36), (2, 37)]),
+    10: (26, [(4, 43), (1, 44)]), 11: (30, [(1, 50), (4, 51)]), 12: (22, [(6, 36), (2, 37)]),
+    13: (22, [(8, 37), (1, 38)]), 14: (24, [(4, 40), (5, 41)]), 15: (24, [(5, 41), (5, 42)]),
+}
+_HIZA = {1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46],
+         10: [6, 28, 50], 11: [6, 30, 54], 12: [6, 32, 58], 13: [6, 34, 62], 14: [6, 26, 46, 66], 15: [6, 26, 48, 70]}
+_EXP, _LOG = [0] * 512, [0] * 256
+_x = 1
+for _i in range(255):
+    _EXP[_i] = _x
+    _LOG[_x] = _i
+    _x <<= 1
+    if _x & 0x100:
+        _x ^= 0x11D
+for _i in range(255, 512):
+    _EXP[_i] = _EXP[_i - 255]
+
+
+def _rs(veri, n):
+    g = [1]
+    for i in range(n):
+        y = [0] * (len(g) + 1)
+        for j, c in enumerate(g):
+            y[j] ^= c
+            if c:
+                y[j + 1] ^= _EXP[_LOG[c] + i]
+        g = y
+    kalan = list(veri) + [0] * n
+    for i in range(len(veri)):
+        c = kalan[i]
+        if c:
+            for j in range(1, len(g)):
+                if g[j]:
+                    kalan[i + j] ^= _EXP[_LOG[g[j]] + _LOG[c]]
+    return kalan[len(veri):]
+
+
+def _bch(v, poly, n):
+    v <<= n
+    uz = poly.bit_length()
+    while v.bit_length() >= uz:
+        v ^= poly << (v.bit_length() - uz)
+    return v
+
+
+def qr_matris(metin):
+    veri = metin.encode("utf-8")
+    for surum in range(1, 16):
+        ec, bloklar = _EC_M[surum]
+        kapasite = sum(a * b for a, b in bloklar)
+        uz_bit = 8 if surum < 10 else 16
+        if 4 + uz_bit + 8 * len(veri) <= kapasite * 8:
+            break
+    else:
+        raise ValueError("QR için metin çok uzun")
+    bitler = [0, 1, 0, 0] + [int(b) for b in format(len(veri), "0%db" % uz_bit)]
+    for c in veri:
+        bitler += [int(b) for b in format(c, "08b")]
+    bitler += [0] * min(4, kapasite * 8 - len(bitler))
+    bitler += [0] * (-len(bitler) % 8)
+    kod = [int("".join(map(str, bitler[i:i + 8])), 2) for i in range(0, len(bitler), 8)]
+    dolgu = [0xEC, 0x11]
+    i = 0
+    while len(kod) < kapasite:
+        kod.append(dolgu[i % 2])
+        i += 1
+    vb, eb, k = [], [], 0
+    for adet, uz in bloklar:
+        for _ in range(adet):
+            parca = kod[k:k + uz]
+            k += uz
+            vb.append(parca)
+            eb.append(_rs(parca, ec))
+    son = []
+    for i in range(max(len(b) for b in vb)):
+        son += [b[i] for b in vb if i < len(b)]
+    for i in range(ec):
+        son += [b[i] for b in eb]
+    n = 17 + 4 * surum
+    M = [[None] * n for _ in range(n)]
+
+    def koy(r, c, v):
+        if 0 <= r < n and 0 <= c < n:
+            M[r][c] = v
+
+    for (r0, c0) in ((0, 0), (0, n - 7), (n - 7, 0)):
+        for r in range(-1, 8):
+            for c in range(-1, 8):
+                ic = 0 <= r <= 6 and 0 <= c <= 6
+                v = ic and (r in (0, 6) or c in (0, 6) or (2 <= r <= 4 and 2 <= c <= 4))
+                koy(r0 + r, c0 + c, 1 if v else 0)
+    for i in range(8, n - 8):
+        M[6][i] = M[i][6] = 1 if i % 2 == 0 else 0
+    h = _HIZA[surum]
+    for r in h:
+        for c in h:
+            if (r, c) in ((h[0], h[0]), (h[0], h[-1]), (h[-1], h[0])):
+                continue
+            for dr in range(-2, 3):
+                for dc in range(-2, 3):
+                    M[r + dr][c + dc] = 1 if max(abs(dr), abs(dc)) != 1 else 0
+    M[n - 8][8] = 1
+    ayrik = [[M[r][c] is not None for c in range(n)] for r in range(n)]
+    for i in range(9):  # biçim alanlarını ayır
+        for (r, c) in ((8, i), (i, 8)):
+            ayrik[r][c] = True
+    for i in range(8):
+        ayrik[8][n - 1 - i] = True
+        ayrik[n - 1 - i][8] = True
+    if surum >= 7:
+        for i in range(6):
+            for j in range(3):
+                ayrik[i][n - 11 + j] = ayrik[n - 11 + j][i] = True
+    dz = [int(b) for c in son for b in format(c, "08b")]
+    yer = []
+    c = n - 1
+    yukari = True
+    while c > 0:
+        if c == 6:
+            c -= 1
+        for r in (range(n - 1, -1, -1) if yukari else range(n)):
+            for cc in (c, c - 1):
+                if not ayrik[r][cc]:
+                    yer.append((r, cc))
+        yukari = not yukari
+        c -= 2
+    maskeler = [lambda r, c: (r + c) % 2 == 0, lambda r, c: r % 2 == 0, lambda r, c: c % 3 == 0, lambda r, c: (r + c) % 3 == 0,
+                lambda r, c: (r // 2 + c // 3) % 2 == 0, lambda r, c: (r * c) % 2 + (r * c) % 3 == 0,
+                lambda r, c: ((r * c) % 2 + (r * c) % 3) % 2 == 0, lambda r, c: ((r + c) % 2 + (r * c) % 3) % 2 == 0]
+
+    def uret(mi):
+        A = [row[:] for row in M]
+        for i, (r, cc) in enumerate(yer):
+            b = dz[i] if i < len(dz) else 0
+            A[r][cc] = b ^ (1 if maskeler[mi](r, cc) else 0)
+        bicim = ((0b00 << 3) | mi)  # M düzeyi = 00
+        bicim = ((bicim << 10) | _bch(bicim, 0b10100110111, 10)) ^ 0b101010000010010
+        bb = [(bicim >> i) & 1 for i in range(15)]
+        for i in range(6):
+            A[i][8] = bb[i]
+        A[7][8], A[8][8], A[8][7] = bb[6], bb[7], bb[8]
+        for i in range(9, 15):
+            A[8][14 - i] = bb[i]
+        for i in range(8):
+            A[8][n - 1 - i] = bb[i]
+        for i in range(8, 15):
+            A[n - 15 + i][8] = bb[i]
+        A[n - 8][8] = 1
+        if surum >= 7:
+            sv = (surum << 12) | _bch(surum, 0b1111100100101, 12)
+            for i in range(18):
+                v = (sv >> i) & 1
+                A[i // 3][n - 11 + i % 3] = v
+                A[n - 11 + i % 3][i // 3] = v
+        return A
+
+    def ceza(A):
+        p = 0
+        for hat in A + [list(x) for x in zip(*A)]:
+            sayi, onc = 0, None
+            for v in hat:
+                if v == onc:
+                    sayi += 1
+                else:
+                    if sayi >= 5:
+                        p += sayi - 2
+                    onc, sayi = v, 1
+            if sayi >= 5:
+                p += sayi - 2
+            s = "".join(map(str, hat))
+            p += 40 * (s.count("10111010000") + s.count("00001011101"))
+        for r in range(n - 1):
+            for cc in range(n - 1):
+                if A[r][cc] == A[r][cc + 1] == A[r + 1][cc] == A[r + 1][cc + 1]:
+                    p += 3
+        koyu = sum(map(sum, A))
+        p += 10 * (abs(koyu * 20 - n * n * 10) // (n * n))
+        return p
+
+    adaylar = [uret(i) for i in range(8)]
+    return min(adaylar, key=ceza)
+
+
+def qr_svg(metin, renk="#070A11", zemin="#F3EEE2"):
+    A = qr_matris(metin)
+    n = len(A)
+    yol = "".join("M%d %dh1v1h-1z" % (c + 4, r + 4) for r in range(n) for c in range(n) if A[r][c])
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" shape-rendering="crispEdges" role="img" aria-label="QR">'
+            '<rect width="100%%" height="100%%" fill="%s"/><path fill="%s" d="%s"/></svg>' % (n + 8, n + 8, zemin, renk, yol))
+
+
+# ---------- Eşleşme ve durum ----------
+AKTARIM_TABAN = os.environ.get("OZMIRA_AKTARIM", "https://ozmira.app/api/telefon/")
+TEL_PORT0 = int(os.environ.get("OZMIRA_TEL_PORT", "8789"))
+
+
+class Kopru:
+    def __init__(self, ev, durum_fn, panel_fn, json_oku, json_yaz, surum, lan_ip):
+        self.ev, self.durum_fn, self.panel_fn = ev, durum_fn, panel_fn
+        self.json_oku, self.json_yaz, self.surum, self.lan_ip = json_oku, json_yaz, surum, lan_ip
+        self.kilit = threading.Lock()
+        self.sunucu = None
+        self.port = None
+        self._onbellek = (0, None)
+        self._son_aktarim = (None, 0)
+        self.aktarim_durum = ""
+
+    # ayar
+    def ayar(self):
+        a = self.json_oku(self.ev / ".telefon.json", {})
+        return a if isinstance(a, dict) and a.get("cihaz") and a.get("anahtar") else None
+
+    def eslestir(self):
+        a = {"cihaz": b64u(secrets.token_bytes(16)), "anahtar": b64u(secrets.token_bytes(32)), "ev_agi": True, "aktarim": False, "t": time.time()}
+        self.json_yaz(self.ev / ".telefon.json", a, gizli=True)
+        self.baslat()
+        return a
+
+    def sifirla(self):
+        try:
+            (self.ev / ".telefon.json").unlink()
+        except OSError:
+            pass
+        self.durdur()
+
+    def ayarla(self, ev_agi=None, aktarim=None):
+        a = self.ayar()
+        if not a:
+            raise ValueError("Önce telefonu eşleştir.")
+        if ev_agi is not None:
+            a["ev_agi"] = bool(ev_agi)
+        if aktarim is not None:
+            a["aktarim"] = bool(aktarim)
+        self.json_yaz(self.ev / ".telefon.json", a, gizli=True)
+        self.durdur()
+        self.baslat()
+        return a
+
+    def qr_metni(self, a):
+        h = "%s:%d" % (self.lan_ip(), self.port or TEL_PORT0) if a.get("ev_agi") else ""
+        q = "ozmira://e?v=1&i=%s&k=%s&a=%d" % (a["cihaz"], a["anahtar"], 1 if a.get("aktarim") else 0)
+        return q + ("&h=" + h if h else "")
+
+    def bilgi(self):
+        a = self.ayar()
+        if not a:
+            return {"eslesmis": False}
+        return {"eslesmis": True, "ev_agi": a.get("ev_agi", True), "aktarim": a.get("aktarim", False), "port": self.port,
+                "ip": self.lan_ip(), "qr": ["".join("1" if v else "0" for v in satir) for satir in qr_matris(self.qr_metni(a))],
+                "aktarim_durum": self.aktarim_durum}
+
+    # anlık durum
+    def anlik(self):
+        simdi = time.time()
+        t, v = self._onbellek
+        if v is not None and simdi - t < 3:
+            return v
+        a = self.ayar()
+        if not a:
+            return None
+        d = self.durum_fn()
+        p = self.panel_fn()
+        yuk = {"v": 1, "surum": self.surum, "t": simdi, "durum": d,
+               "gunluk": p.get("gunluk", []) if isinstance(p, dict) else [],
+               "olaylar": (p.get("olaylar", []) if isinstance(p, dict) else [])[:30]}
+        duz = json.dumps(yuk, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        nonce = secrets.token_bytes(12)
+        c = sifrele(b64u_coz(a["anahtar"]), nonce, duz, a["cihaz"].encode())
+        v = json.dumps({"v": 1, "n": b64u(nonce), "c": b64u(c)}).encode()
+        self._onbellek = (simdi, v)
+        return v
+
+    # ev ağı ucu
+    def baslat(self):
+        a = self.ayar()
+        if not a:
+            return
+        if a.get("ev_agi") and self.sunucu is None:
+            kopru = self
+
+            class Tel(http.server.BaseHTTPRequestHandler):
+                server_version = "OZMIRA"
+                sys_version = ""
+
+                def log_message(self, *x):
+                    pass
+
+                def _yaz(self, kod, b, ctype="application/json"):
+                    self.send_response(kod)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(b)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.end_headers()
+                    self.wfile.write(b)
+
+                def do_GET(self):
+                    a2 = kopru.ayar()
+                    yol = self.path.split("?")[0]
+                    if not a2 or not a2.get("ev_agi") or not hmac.compare_digest(yol.encode(), ("/m/" + a2["cihaz"]).encode()):
+                        return self._yaz(404, b'{"hata":"yok"}')
+                    v = kopru.anlik()
+                    return self._yaz(200, v or b'{"hata":"yok"}')
+
+                def do_OPTIONS(self):
+                    self._yaz(204, b"")
+
+            for port in range(TEL_PORT0, TEL_PORT0 + 10):
+                try:
+                    s = http.server.ThreadingHTTPServer(("0.0.0.0", port), Tel)
+                    s.daemon_threads = True
+                    self.sunucu, self.port = s, port
+                    threading.Thread(target=s.serve_forever, daemon=True).start()
+                    break
+                except OSError:
+                    continue
+        if a.get("aktarim"):
+            threading.Thread(target=self._aktarim_dongusu, daemon=True).start()
+
+    def durdur(self):
+        if self.sunucu is not None:
+            s, self.sunucu, self.port = self.sunucu, None, None
+            s.shutdown()          # dinleme döngüsü en geç yarım saniyede biter
+            s.server_close()      # port hemen boşalır; yeniden açınca aynı port kullanılır
+        self._onbellek = (0, None)
+
+    # şifreli aktarım
+    def yazma_izni(self, a):
+        return hmac.new(b64u_coz(a["anahtar"]), b"ozmira-yaz", hashlib.sha256).hexdigest()
+
+    def _aktarim_dongusu(self):
+        while True:
+            a = self.ayar()
+            if not a or not a.get("aktarim"):
+                return
+            try:
+                self._onbellek = (0, None)
+                v = self.anlik()
+                ozet = hashlib.sha256(json.dumps(self.durum_fn(), sort_keys=True, default=str).encode()).hexdigest()
+                eski, zaman = self._son_aktarim
+                if v and (ozet != eski or time.time() - zaman > 300):
+                    r = urllib.request.Request(AKTARIM_TABAN + a["cihaz"], data=v, method="PUT",
+                                               headers={"Content-Type": "application/json", "X-Yaz": self.yazma_izni(a), "User-Agent": "OZMIRA/" + self.surum})
+                    with urllib.request.urlopen(r, timeout=10) as y:
+                        y.read(256)
+                    self._son_aktarim = (ozet, time.time())
+                    self.aktarim_durum = "ok"
+            except Exception as e:  # ağ yoksa sessizce yeniden dener
+                self.aktarim_durum = "hata: %s" % type(e).__name__
+            time.sleep(15)
