@@ -1,5 +1,157 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://ozmira.app/</loc><lastmod>2026-11-13</lastmod></url>
-  <url><loc>https://ozmira.app/ag.html</loc><lastmod>2026-11-13</lastmod></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://ozmira.app/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/en/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/de/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/es/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/pt/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/ru/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/ar/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/nl/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/it/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/fr/</loc>
+    <lastmod>2026-11-13</lastmod>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ozmira.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://ozmira.app/it/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ozmira.app/"/>
+  </url>
+  <url>
+    <loc>https://ozmira.app/ag.html</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
 </urlset>

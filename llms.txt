@@ -1,0 +1,37 @@
+# OZMIRA
+
+> OZMIRA is a free, local desktop app that shows all your AI systems and agents (Claude, ChatGPT/Codex, Gemini, Grok and your own agents) in one 3D scene and one dashboard. It shows which agent is running, how many tasks finished today and how many tokens were reported, and its shared chat routes each message to the right AI by topic. No account, no cloud: records stay on your computer.
+
+Status: early prototype, version 0.3.3 (November 2026). Built independently; first users wanted.
+
+## What it does
+- One scene: every AI system appears in its own color and shape, linked to the OZMIRA mark in the center.
+- Live signal: an agent sends a one-line command when it starts and finishes (`python3 ozmira.py olay claude writer basla` / `... bitti 1200`); the scene lights up and the token counter adds up.
+- Dashboard: summary boxes, last 7 days, searchable agent table, event list, CSV export, token flow and estimated cost per system and agent (you enter prices; it is an estimate).
+- Shared chat: type in one box; OZMIRA picks the AI by topic (software to Claude, product ideas to ChatGPT/Codex, documents to Gemini) using the command-line tool already installed on your computer. Chats are kept per project.
+- Ten-lesson in-app guide, and the Ozma Academy on the website: eight hands-on missions for building your own AI setup.
+
+## Plans
+- Free: up to 2 AI systems, 7 agents, 50 shared-chat messages a day during beta, 2 chat projects. No account.
+- Pro: not on sale yet; price not set.
+
+## Privacy
+- Runs on your computer only; the server listens on localhost and every request needs a random key.
+- Chat messages go only to the AI tool you already have installed. Nothing else is sent unless you turn on anonymous counters.
+- Website analytics: GoatCounter, cookieless.
+
+## Requirements
+- Python 3.8 or newer; Windows, macOS or Linux. Chrome, Edge or Brave for the app window.
+- For shared chat: the AI's own command-line tool (claude, codex or gemini) and its account.
+
+## Links
+- [Website (Turkish, default)](https://ozmira.app/)
+- [English](https://ozmira.app/en/) · [Deutsch](https://ozmira.app/de/) · [Español](https://ozmira.app/es/) · [Português](https://ozmira.app/pt/) · [Русский](https://ozmira.app/ru/) · [العربية](https://ozmira.app/ar/) · [Nederlands](https://ozmira.app/nl/) · [Italiano](https://ozmira.app/it/) · [Français](https://ozmira.app/fr/)
+- [Free download (zip)](https://ozmira.app/ozmira-app.zip)
+- [Ozma decision network demo](https://ozmira.app/ag.html)
+- [Contact / feedback form](https://ozmira.app/en/#yaz) · email: destek@ozmira.app
+
+## Honest limits
+- The video on the site is an animation, not a screen recording.
+- Tested by hand on Windows with real Claude Code; macOS/Linux, real Codex and Gemini tools and graphics card variety are not tested yet.
+- Translations were made with AI and not yet reviewed by native speakers.
