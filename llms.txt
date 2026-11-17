@@ -11,7 +11,8 @@ Status: early prototype, version 0.4.0 (November 2026). Built independently; fir
 - Shared chat: type in one box; OZMIRA picks the AI by topic (software to Claude, product ideas to ChatGPT/Codex, documents to Gemini) using the command-line tool already installed on your computer. Chats are kept per project.
 - Ten-lesson in-app guide, and the Ozma Academy on the website: eight hands-on missions for building your own AI setup.
 
-## Phone app (Android, coming to stores)
+## Phone app (Android 6.0+, version 1.0.1, free)
+- [Download the Android app (APK, about 11 MB)](https://ozmira.app/ozmira-android.apk) · [32-bit phones](https://ozmira.app/ozmira-android-armv7.apk). Google Play and other stores are coming; no iPhone version yet.
 - Shows running agents, finished tasks, tokens, a 7-day summary and recent events from the desktop app.
 - Pairs with the desktop by QR code. Data is encrypted on the computer with AES-256-GCM; only the phone holds the key.
 - Reads over the home network by default; an optional encrypted relay via ozmira.app works away from home (the server cannot read the content).
@@ -33,6 +34,7 @@ Status: early prototype, version 0.4.0 (November 2026). Built independently; fir
 - [Website (Turkish, default)](https://ozmira.app/)
 - [English](https://ozmira.app/en/) · [Deutsch](https://ozmira.app/de/) · [Español](https://ozmira.app/es/) · [Português](https://ozmira.app/pt/) · [Русский](https://ozmira.app/ru/) · [العربية](https://ozmira.app/ar/) · [Nederlands](https://ozmira.app/nl/) · [Italiano](https://ozmira.app/it/) · [Français](https://ozmira.app/fr/)
 - [Free download (zip)](https://ozmira.app/ozmira-app.zip)
+- [Android app (APK)](https://ozmira.app/ozmira-android.apk)
 - [Ozma decision network demo](https://ozmira.app/ag.html)
 - [Privacy policy](https://ozmira.app/gizlilik.html)
 - [Contact / feedback form](https://ozmira.app/en/#yaz) · email: destek@ozmira.app

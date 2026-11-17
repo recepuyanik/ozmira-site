@@ -12,3 +12,11 @@
 
 /llms.txt
   Content-Type: text/plain; charset=utf-8
+
+/ozmira-android.apk
+  Content-Type: application/vnd.android.package-archive
+  Cache-Control: no-cache
+
+/ozmira-android-armv7.apk
+  Content-Type: application/vnd.android.package-archive
+  Cache-Control: no-cache
