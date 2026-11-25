@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://ozmira.app/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -17,7 +17,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/en/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -32,7 +32,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/de/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -47,7 +47,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/es/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -62,7 +62,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/pt/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -77,7 +77,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/ru/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -92,7 +92,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/ar/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -107,7 +107,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/nl/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -122,7 +122,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/it/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -137,7 +137,7 @@
   </url>
   <url>
     <loc>https://ozmira.app/fr/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
     <xhtml:link rel="alternate" hreflang="tr" href="https://ozmira.app/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://ozmira.app/en/"/>
     <xhtml:link rel="alternate" hreflang="de" href="https://ozmira.app/de/"/>
@@ -152,10 +152,10 @@
   </url>
   <url>
     <loc>https://ozmira.app/ag.html</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
   </url>
   <url>
     <loc>https://ozmira.app/gizlilik.html</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-25</lastmod>
   </url>
 </urlset>

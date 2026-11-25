@@ -1236,6 +1236,15 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
 })();
 
 </script>
+<script>
+// İndirme sayacı: zip ve APK tıklamaları GoatCounter'da ayrı olay olarak sayılır (çerez yok, kişisel veri yok).
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href$=".zip"], a[href$=".apk"]');
+  if (!a || !window.goatcounter || !window.goatcounter.count) return;
+  var f = a.getAttribute('href').split('/').pop();
+  window.goatcounter.count({ path: 'indir/' + f, title: 'İndirme: ' + f, event: true });
+});
+</script>
 <script data-goatcounter="https://ozmira.goatcounter.com/count" async="" src="https://gc.zgo.at/count.js"></script>
 
 </body></html>
