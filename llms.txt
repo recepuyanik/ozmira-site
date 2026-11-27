@@ -31,13 +31,13 @@ Status: early prototype, version 0.4.0 (November 2026). Built independently; fir
 - For shared chat: the AI's own command-line tool (claude, codex or gemini) and its account.
 
 ## Links
-- [Website (Turkish, default)](https://ozmira.app/)
-- [English](https://ozmira.app/en/) · [Deutsch](https://ozmira.app/de/) · [Español](https://ozmira.app/es/) · [Português](https://ozmira.app/pt/) · [Русский](https://ozmira.app/ru/) · [العربية](https://ozmira.app/ar/) · [Nederlands](https://ozmira.app/nl/) · [Italiano](https://ozmira.app/it/) · [Français](https://ozmira.app/fr/)
+- [Website (English, default)](https://ozmira.app/)
+- [Türkçe](https://ozmira.app/tr/) · [Deutsch](https://ozmira.app/de/) · [Español](https://ozmira.app/es/) · [Português](https://ozmira.app/pt/) · [Русский](https://ozmira.app/ru/) · [العربية](https://ozmira.app/ar/) · [Nederlands](https://ozmira.app/nl/) · [Italiano](https://ozmira.app/it/) · [Français](https://ozmira.app/fr/)
 - [Free download (zip)](https://ozmira.app/ozmira-app.zip)
 - [Android app (APK)](https://ozmira.app/ozmira-android.apk)
 - [Ozma decision network demo](https://ozmira.app/ag.html)
 - [Privacy policy](https://ozmira.app/gizlilik.html)
-- [Contact / feedback form](https://ozmira.app/en/#yaz) · email: destek@ozmira.app
+- [Contact / feedback form](https://ozmira.app/#yaz) · email: destek@ozmira.app
 
 ## Honest limits
 - The video on the site is an animation, not a screen recording.

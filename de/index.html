@@ -22,7 +22,7 @@
 
 
 <meta name="twitter:card" content="summary_large_image">
-<link rel="canonical" href="https://ozmira.app/de/"><link rel="alternate" hreflang="tr" href="https://ozmira.app/"><link rel="alternate" hreflang="en" href="https://ozmira.app/en/"><link rel="alternate" hreflang="de" href="https://ozmira.app/de/"><link rel="alternate" hreflang="es" href="https://ozmira.app/es/"><link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"><link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"><link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"><link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"><link rel="alternate" hreflang="it" href="https://ozmira.app/it/"><link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"><link rel="alternate" hreflang="x-default" href="https://ozmira.app/">
+<link rel="canonical" href="https://ozmira.app/de/"><link rel="alternate" hreflang="tr" href="https://ozmira.app/tr/"><link rel="alternate" hreflang="en" href="https://ozmira.app/"><link rel="alternate" hreflang="de" href="https://ozmira.app/de/"><link rel="alternate" hreflang="es" href="https://ozmira.app/es/"><link rel="alternate" hreflang="pt" href="https://ozmira.app/pt/"><link rel="alternate" hreflang="ru" href="https://ozmira.app/ru/"><link rel="alternate" hreflang="ar" href="https://ozmira.app/ar/"><link rel="alternate" hreflang="nl" href="https://ozmira.app/nl/"><link rel="alternate" hreflang="it" href="https://ozmira.app/it/"><link rel="alternate" hreflang="fr" href="https://ozmira.app/fr/"><link rel="alternate" hreflang="x-default" href="https://ozmira.app/">
 <meta name="twitter:image" content="https://ozmira.app/poster.jpg">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon.png" type="image/png" sizes="256x256">
@@ -896,7 +896,7 @@ python3 ozmira.py olay claude yazar bitti 1200</pre><p class="small" data-t="s2n
     if (!dilM.hidden && !(ev.target.closest && ev.target.closest('#dil'))) dilKapat(false);
     var b = ev.target.closest && ev.target.closest('.dil-m button'); if (!b) return;
     window.LANG = b.getAttribute('data-lang'); try { localStorage.setItem('ozmira-site-dil', window.LANG); } catch (_) {}
-    if (document.documentElement.hasAttribute('data-sayfa-dili')) { location.href = (window.LANG === 'tr' ? '/' : '/' + window.LANG + '/') + location.hash; return; }
+    if (document.documentElement.hasAttribute('data-sayfa-dili')) { location.href = (window.LANG === 'en' ? '/' : '/' + window.LANG + '/') + location.hash; return; }
     dilKapat(true); apply();
   });
   dilM.addEventListener('keydown', function (ev) {
