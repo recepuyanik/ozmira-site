@@ -20,3 +20,9 @@
 /ozmira-android-armv7.apk
   Content-Type: application/vnd.android.package-archive
   Cache-Control: no-cache
+
+/kaynak/*
+  X-Robots-Tag: noindex
+
+/404.html
+  X-Robots-Tag: noindex

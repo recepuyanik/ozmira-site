@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="tr" dir="ltr" data-sayfa-dili="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>OZMIRA: yapay zekâ sistemlerin ve ajanların tek sahnede</title>
 <meta name="description" content="OZMIRA bilgisayarında çalışan yerel bir uygulamadır: yapay zekâ sistemlerini ve ajanlarını tek bir 3B sahnede ve yönetim panelinde gösterir, ortak sohbetle her mesajı doğru yapay zekâya yollar. Ücretsiz başlanır.">
 <meta name="theme-color" content="#070A11">
@@ -1257,4 +1257,32 @@ document.addEventListener('click', function (e) {
 });
 </script>
 <script data-goatcounter="https://ozmira.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<script>
+(function () {
+  var D = {en:["View this page in English","English"],de:["Diese Seite auf Deutsch ansehen","Deutsch"],es:["Ver esta página en español","Español"],pt:["Ver esta página em português","Português"],ru:["Открыть страницу на русском","Русский"],ar:["عرض هذه الصفحة بالعربية","العربية"],nl:["Bekijk deze pagina in het Nederlands","Nederlands"],it:["Visualizza questa pagina in italiano","Italiano"],fr:["Voir cette page en français","Français"]};
+  var s = null; try { s = localStorage.getItem('ozmira-site-dil'); } catch (_) {}
+  if (s === 'tr') return;
+  var n = (s && D[s]) ? s : ((navigator.languages && navigator.languages[0]) || navigator.language || 'en').slice(0, 2).toLowerCase();
+  if (n === 'tr') return;
+  if (!D[n]) n = 'en';
+  var b = document.createElement('div');
+  b.setAttribute('role', 'region');
+  b.setAttribute('aria-label', 'Language');
+  b.style.cssText = 'position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;display:flex;gap:8px;align-items:center;padding:8px 8px 8px 16px;border-radius:14px;background:#0F1522;border:1px solid #2A3348;color:#E8ECF4;font:14px/1.4 Inter,system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.45);max-width:calc(100% - 32px)';
+  if (n === 'ar') b.dir = 'rtl';
+  var a = document.createElement('a');
+  a.href = '/' + n + '/' + location.hash;
+  a.textContent = D[n][0];
+  a.style.cssText = 'color:#E8ECF4;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;padding:0 14px;border-radius:10px;background:#1A2336;border:1px solid #C9A85A';
+  a.addEventListener('click', function () { try { localStorage.setItem('ozmira-site-dil', n); } catch (_) {} });
+  var x = document.createElement('button');
+  x.type = 'button';
+  x.setAttribute('aria-label', 'Türkçe kal / Stay in Turkish');
+  x.textContent = '×';
+  x.style.cssText = 'min-width:44px;min-height:44px;border:0;background:transparent;color:#A9B2C3;font-size:22px;cursor:pointer';
+  x.addEventListener('click', function () { try { localStorage.setItem('ozmira-site-dil', 'tr'); } catch (_) {} b.remove(); });
+  b.appendChild(a); b.appendChild(x);
+  document.body.appendChild(b);
+})();
+</script>
 </body></html>
